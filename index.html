@@ -4,13 +4,63 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0d0d17">
-  <title>Impostor</title>
-  <link rel="stylesheet" href="../assets/style.css">
+  <title>Res Assiny</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="wrap" id="app"></div>
-  <script src="../assets/comum.js"></script>
-  <script src="palavras.js"></script>
-  <script src="game.js"></script>
+  <div class="wrap">
+    <div class="center" style="margin: 24px 0 28px;">
+      <div class="logo">Res Assiny</div>
+      <p class="muted">Escolha o jogo da rodada</p>
+    </div>
+
+    <a class="card game-tile" href="nolimite.html">
+      <div class="icon">🎯</div>
+      <div>
+        <h3 style="margin:0 0 4px">No Limite</h3>
+        <div class="muted small">Chegue o mais perto possível da resposta sem passar dela. 📲 Dá para jogar cada um no seu celular.</div>
+      </div>
+    </a>
+
+    <a class="card game-tile" href="top100.html">
+      <div class="icon">💯</div>
+      <div>
+        <h3 style="margin:0 0 4px">Top 100</h3>
+        <div class="muted small">Acerte quem está na lista. Quanto mais lá embaixo, mais pontos. Tem Top 10 a 100 e modo reverso. 📲 Dá para jogar cada um no seu celular.</div>
+      </div>
+    </a>
+
+    <a class="card game-tile" href="top100.html?estilo=duvido&n=10">
+      <div class="icon">✋</div>
+      <div>
+        <h3 style="margin:0 0 4px">Top 10 · Duvido</h3>
+        <div class="muted small">Fale algo do Top 10. Se alguém duvidar, o app confere. Errou, tá fora. 📲 Um ou vários celulares.</div>
+      </div>
+    </a>
+
+    <a class="card game-tile" href="qtl.html">
+      <div class="icon">⚽</div>
+      <div>
+        <h3 style="margin:0 0 4px">Quem Tava Lá</h3>
+        <div class="muted small">Fale quem jogou aquele jogo histórico. Errou, ou te pegaram no duvido? Tá fora. 📲 Dá para jogar cada um no seu celular.</div>
+      </div>
+    </a>
+
+    <a class="card game-tile" href="impostor.html">
+      <div class="icon">🕵️</div>
+      <div>
+        <h3 style="margin:0 0 4px">Impostor</h3>
+        <div class="muted small">Todos sabem a palavra, menos o impostor. Futebol ou temas gerais. 📲 Dá para jogar cada um no seu celular.</div>
+      </div>
+    </a>
+
+    <div class="card game-tile soon">
+      <div class="icon">➕</div>
+      <div>
+        <h3 style="margin:0 0 4px">Próximo jogo</h3>
+        <div class="muted small">Em breve</div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

@@ -28,6 +28,9 @@ Site de jogos para jogar com os amigos, feito para rodar no GitHub Pages (sem se
   - Vários celulares (`impostor/sala.html`): cada um vê a própria palavra e vota no seu celular
   - Votaram num inocente ou deu empate → impostores vencem. Pegaram todos → inocentes vencem. Placar da noite: inocente +1, impostor +2
 
+## Estrutura
+Todos os arquivos ficam na raiz (sem pastas), para facilitar o upload pelo site do GitHub.
+
 ## Publicar no GitHub Pages
 1. Crie um repositório no GitHub (ex.: `res-assiny`).
 2. Envie todos os arquivos desta pasta para o repositório (botão **Add file → Upload files**, arrastando a pasta inteira).

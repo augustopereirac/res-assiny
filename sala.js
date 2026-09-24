@@ -126,7 +126,7 @@
     const codigoUrl = normCodigo(params.get('sala'));
     let nome = C.store.get('meuNome', '');
     app.innerHTML = `
-      <div class="topbar"><a class="link-back" href="../">← Jogos</a></div>
+      <div class="topbar"><a class="link-back" href="index.html">← Jogos</a></div>
       <div class="modo-toggle"><a href="${voltarHref}">📱 Um celular</a><span class="on">📲 Vários celulares</span></div>
       <div class="center" style="margin-bottom:18px">
         <div class="logo">${C.esc(titulo)}</div>
