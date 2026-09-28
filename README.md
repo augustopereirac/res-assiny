@@ -3,30 +3,36 @@
 Site de jogos para jogar com os amigos, feito para rodar no GitHub Pages (sem servidor, sem build).
 
 ## Jogos
-- **No Limite** (`no-limite/`): chegue o mais perto da resposta sem passar dela.
+- **No Limite** (`nolimite.html`): chegue o mais perto da resposta sem passar dela.
   - Cravou = 2 pontos (se alguém cravou, só quem cravou pontua)
   - Mais perto sem estourar = 1 ponto (empates pontuam juntos)
   - Todo mundo estourou = ninguém pontua
-  - 500 perguntas em 15 temas (`no-limite/perguntas.js`)
-  - Modo um celular (passa a vez) ou vários celulares (`no-limite/sala.html`): cada um responde no seu
+  - 500 perguntas em 15 temas (`nolimite-perguntas.js`)
+  - Modo um celular (passa a vez) ou vários celulares (`nolimite-sala.html`): cada um responde no seu
 
-- **Top 100 / Top 10** (`top-100/`): 72 listas pesquisadas na web (futebol, Brasil, mundo, música, cinema, internet, economia), cada uma com fonte, data e critério mostrados no jogo.
+- **Top 100 / Top 10** (`top100.html`): 72 listas pesquisadas na web (futebol, Brasil, mundo, música, cinema, internet, economia), cada uma com fonte, data e critério mostrados no jogo.
   - Tamanho: Top 10, 20, 30, 50 ou 100
   - Estilo Pontos: pontos = posição, fora da lista = 0, mais pontos vence (em X rodadas ou primeiro a X pontos)
   - Estilo Reverso: pontos = posição, fora/passar = tamanho + 1, menos pontos vence
   - Estilo Duvido: sem pontos; o app só confere quando alguém duvida; último em pé vence (link direto no hub: Top 10 · Duvido)
-  - Um ou vários celulares (`top-100/sala.html`)
-  - Listas em `top-100/listas.js`
-- **Quem Tava Lá** (`quem-tava-la/`): fale alguém que estava em campo (titular ou reserva que entrou).
+  - Um ou vários celulares (`top100-sala.html`)
+  - Listas em `top100-listas.js`
+- **Quem Tava Lá** (`qtl.html`): fale alguém que estava em campo (titular ou reserva que entrou).
   - Com "Duvido": duvidou e estava → quem duvidou sai, quem falou ganha folga; duvidou e não estava → quem falou sai, quem duvidou ganha folga
   - Sem "Duvido": o app confere na hora; errou, está fora
-  - Um ou vários celulares (`quem-tava-la/sala.html`): cada um fala no seu e os outros duvidam no deles
-  - Jogos em `quem-tava-la/jogos.js`. Quando a lista de reservas de um time pode estar incompleta (`reservas_completas: false`), o app pergunta ao grupo antes de eliminar alguém por um nome que não conhece.
-- **Impostor** (`impostor/`): todos recebem a mesma palavra, menos o impostor. Temas Futebol (200) e Geral (300) em `impostor/palavras.js`.
+  - Um ou vários celulares (`qtl-sala.html`): cada um fala no seu e os outros duvidam no deles
+  - Jogos em `qtl-jogos.js`. Quando a lista de reservas de um time pode estar incompleta (`reservas_completas: false`), o app pergunta ao grupo antes de eliminar alguém por um nome que não conhece.
+- **Impostor** (`impostor.html`): todos recebem a mesma palavra, menos o impostor. Temas Futebol (200) e Geral (300) em `impostor-palavras.js`.
   - Impostor recebe uma dica (sabe que é impostor) ou uma palavra parecida (não sabe)
   - 1 a 3 impostores, 1 a 3 rodadas de pistas, votação secreta ou aberta
-  - Vários celulares (`impostor/sala.html`): cada um vê a própria palavra e vota no seu celular
+  - Vários celulares (`impostor-sala.html`): cada um vê a própria palavra e vota no seu celular
   - Votaram num inocente ou deu empate → impostores vencem. Pegaram todos → inocentes vencem. Placar da noite: inocente +1, impostor +2
+  - As dicas do impostor são vagas (ex.: "Meio-campo", "Comida") para não entregar a palavra
+  - As palavras ditas em cada rodada ficam anotadas numa tabela (um celular: digitadas por quem conduz; vários: cada um digita a sua)
+- **Monta o Time** (`montatime.html`): critério fixo na partida (mais alto, mais baixo, mais gols/jogos pela seleção, mais gols em clubes, mais clubes, mais velho). A cada rodada sai um tema (122: seleções, clubes, países, gerações) e cada um escolhe um jogador para uma vaga do seu time (GOL, 2 DEF, 2 MEI, 2 ATA). Fora do tema não pontua. Um ou vários celulares (`montatime-sala.html`).
+- **De Quem É a Carreira?** (`carreira.html`): os clubes aparecem um a um; acertar no clube k de N vale N−k+1. Um ou vários celulares (`carreira-sala.html`).
+- **Ordene a Carreira** (`ordene.html`): jogador + clubes embaralhados; +1 por posição certa, +3 se acertar tudo. Um ou vários celulares (`ordene-sala.html`).
+- Dados de futebol em `craques.js` (2.440 jogadores, Wikidata, set/2026) e regras em `futebol.js`. Títulos e assistências não estão nos dados.
 
 ## Estrutura
 Todos os arquivos ficam na raiz (sem pastas), para facilitar o upload pelo site do GitHub.
@@ -38,7 +44,7 @@ Todos os arquivos ficam na raiz (sem pastas), para facilitar o upload pelo site 
 4. Em 1 ou 2 minutos o site fica em `https://SEU-USUARIO.github.io/res-assiny/`.
 
 ## Adicionar ou corrigir perguntas
-Edite `no-limite/perguntas.js`. Cada linha é uma pergunta:
+Edite `nolimite-perguntas.js`. Cada linha é uma pergunta:
 
 ```js
 {"id": 501, "c": "Futebol", "p": "Pergunta?", "r": 123, "u": "gols", "i": "Curiosidade mostrada na revelação."}

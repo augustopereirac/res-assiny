@@ -45,6 +45,7 @@
       pegos: H.pegos || [], votacaoId: H.votacaoId || 0,
       votaram: Object.fromEntries(Object.keys(H.votos || {}).map(k => [k, true])),
       viram: H.viram || {},
+      pistas: H.pistas || {}, nPistas: H.nPistas || 0,
       apuracao: H.apuracao || null,
       fim: fim ? H.fim : null
     };
@@ -54,6 +55,11 @@
 
   function acaoHost(msg) {
     if (msg.tipo === 'vi' && H.fase === 'cartas') { H.viram[msg.de] = true; publicar(); }
+    if (msg.tipo === 'pista' && H.fase === 'pistas' && H.vivos.includes(msg.de)) {
+      const t = String(msg.dados.texto || '').trim().slice(0, 30);
+      if (!H.pistas[msg.de]) H.pistas[msg.de] = [];
+      H.pistas[msg.de][H.nPistas] = t; publicar();
+    }
     if (msg.tipo === 'voto' && H.fase === 'votacao' && H.vivos.includes(msg.de) && H.vivos.includes(msg.dados.em) && msg.dados.em !== msg.de) {
       H.votos[msg.de] = msg.dados.em;
       if (H.vivos.every(v => H.votos[v])) apurar(); else publicar();
@@ -85,6 +91,7 @@
     H.ordem = ids.slice(ini).concat(ids.slice(0, ini));
     H.rodadaFala = 1; H.rodadasAlvo = H.cfg.rodadas; H.pegos = [];
     H.votos = {}; H.viram = {}; H.apuracao = null; H.fim = null; H.votacaoId = 0;
+    H.pistas = {}; H.nPistas = 0;
     H.cartas = {};
     const q = H.palavra;
     lista.forEach(j => {
@@ -101,6 +108,7 @@
 
   function irPistas() { H.fase = 'pistas'; publicar(); }
   function proximaRodadaPistas() {
+    H.nPistas = (H.nPistas || 0) + 1;
     if (H.rodadaFala < H.rodadasAlvo) { H.rodadaFala++; publicar(); }
     else abrirVotacao();
   }
@@ -149,6 +157,14 @@
   const vivo = () => estado && estado.vivos.includes(sala.id);
 
   function desenhar() {
+    const antes = document.getElementById('pista');
+    const valor = antes ? antes.value : null, foco = antes && document.activeElement === antes;
+    desenhar0();
+    const depois = document.getElementById('pista');
+    if (depois && valor) depois.value = valor;
+    if (depois && foco) depois.focus();
+  }
+  function desenhar0() {
     if (!estado) return render(`${topo()}<div class="pass"><div class="emoji">⏳</div><p class="muted">Esperando o anfitrião…</p></div>`);
     ({ lobby: telaLobby, cartas: telaCarta, pistas: telaPistas, votacao: telaVotacao, apuracao: telaApuracao, fim: telaFim })[estado.fase]();
   }
@@ -199,6 +215,18 @@
     document.getElementById('comecar').onclick = iniciar;
   }
 
+  function htmlPistasM() {
+    const n = (estado.nPistas || 0);
+    const temAtual = Object.values(estado.pistas || {}).some(a => a && a[n]);
+    const total = n + (temAtual ? 1 : 0);
+    if (!total) return '';
+    const cols = Array.from({ length: total }, (_, i) => i);
+    return `<div class="card"><span class="label">Palavras já ditas</span><div style="overflow-x:auto"><table class="score pistas">
+      <tr><td></td>${cols.map(i => `<td class="muted small" style="text-align:left">R${i + 1}</td>`).join('')}</tr>
+      ${estado.ordem.map(id => `<tr><td><strong>${esc(nomeDe(id))}</strong>${estado.vivos.includes(id) ? '' : ' <span class="muted small">(fora)</span>'}</td>${cols.map(i => `<td style="text-align:left;font-weight:600">${esc(((estado.pistas || {})[id] || [])[i] || '—')}</td>`).join('')}</tr>`).join('')}
+    </table></div></div>`;
+  }
+
   function htmlCarta() {
     if (!carta) return '<p class="muted center">Recebendo sua carta…</p>';
     if (carta.tipo === 'impostor') return `<div class="secret imp"><div class="secret-word" style="color:var(--accent)">Você é o IMPOSTOR</div>
@@ -235,12 +263,16 @@
     render(`
       ${topo(`Pistas ${estado.rodadaFala}/${estado.rodadasAlvo}`)}
       <div class="card center"><div class="emoji" style="font-size:2.2rem">🗣️</div><h2 style="margin:6px 0">Cada um fala UMA palavra</h2><p class="muted small" style="margin:0">Em voz alta, nesta ordem:</p></div>
-      <div class="card">${ordem.map((id, i) => `<div class="lineup-row"><span class="pos">${i + 1}º</span><span class="grow"><strong>${esc(nomeDe(id))}</strong>${id === sala.id ? ' <span class="muted small">(você)</span>' : ''}</span></div>`).join('')}</div>
+      <div class="card">${ordem.map((id, i) => { const w = ((estado.pistas || {})[id] || [])[estado.nPistas]; return `<div class="lineup-row"><span class="pos">${i + 1}º</span><span class="grow"><strong>${esc(nomeDe(id))}</strong>${id === sala.id ? ' <span class="muted small">(você)</span>' : ''}</span><span style="font-weight:700">${w ? esc(w) : '<span class="muted small">⏳</span>'}</span></div>`; }).join('')}</div>
+      ${vivo() ? `<form id="fpista" class="row" style="margin-bottom:14px"><input class="grow" type="text" id="pista" maxlength="30" autocomplete="off" placeholder="Depois de falar, anote sua palavra"><button class="btn small" type="submit">Anotar</button></form>` : ''}
+      ${htmlPistasM()}
       ${estado.pegos.length ? `<p class="muted small center">Fora: ${estado.pegos.map(esc).join(', ')} (impostor pego)</p>` : ''}
       ${participo() ? cartaCard() : ''}
       ${souHost ? `<button class="btn" id="fim">${estado.rodadaFala < estado.rodadasAlvo ? 'Todos falaram, próxima rodada' : 'Todos falaram, abrir votação'}</button>` : '<p class="muted center">O anfitrião avança quando todos falarem.</p>'}
     `);
     ligarCarta();
+    const fp = document.getElementById('fpista');
+    if (fp) fp.onsubmit = e => { e.preventDefault(); const i = document.getElementById('pista'); const t = i.value.trim(); if (!t) return; i.value = ''; sala.enviar('pista', { texto: t }); };
     if (souHost) document.getElementById('fim').onclick = proximaRodadaPistas;
   }
 
@@ -251,6 +283,7 @@
       ${topo('Votação')}
       <h2 class="center" style="margin:10px 0 6px">Quem é o impostor?</h2>
       <p class="muted small center" style="margin-top:0">Voto secreto. Empate = o impostor escapa.</p>
+      ${htmlPistasM()}
       ${!vivo() ? '<p class="muted center">Você não vota nesta rodada.</p>' : jaVotei
         ? `<div class="card center"><div class="muted small">Seu voto</div><div style="font-size:1.6rem;font-weight:800">${esc(meuVoto ? nomeDe(meuVoto) : '✔')}</div><div class="muted small">Aguardando os outros…</div></div>`
         : ops.map(id => `<button class="btn secondary" data-voto="${esc(id)}">${esc(nomeDe(id))}</button>`).join('')}
@@ -291,6 +324,7 @@
       <div class="card center"><div class="muted small">A palavra era</div><div class="secret-word">${esc(f.palavra)}</div>
         <div class="muted small">${f.modo === 'parecida' ? `O impostor recebeu: <strong>${esc(f.parecida)}</strong>` : `Dica do impostor: <strong>${esc(f.dica)}</strong>`}</div>
         <p style="margin:14px 0 0">${f.impostores.length > 1 ? 'Impostores' : 'Impostor'}: <strong>${f.impostores.map(esc).join(' e ')}</strong></p></div>
+      ${htmlPistasM()}
       ${estado.apuracao ? blocoVotos(estado.apuracao) : ''}
       <div class="card"><span class="label">Placar da noite</span>${tabelaPlacar()}<p class="muted small" style="margin:10px 0 0">Inocente +1 quando o grupo vence. Impostor +2.</p></div>
       ${souHost ? '<button class="btn" id="denovo">Nova partida</button><button class="btn secondary" id="lobby">Mudar tema / configurações</button>' : '<p class="muted center">O anfitrião começa a próxima.</p>'}

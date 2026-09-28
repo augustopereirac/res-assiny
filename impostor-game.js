@@ -119,6 +119,8 @@
     const impostores = new Set(C.shuffle(js).slice(0, cfg.impostores));
     const ini = Math.floor(Math.random() * js.length);
     p = {
+      pistas: {}, // jogador -> [palavras por rodada]
+      nPistas: 0,
       palavra,
       impostores,
       jogadores: js,
@@ -199,16 +201,37 @@
         <p class="muted small" style="margin:0">Relacionada à palavra secreta, sem entregar demais. Na ordem:</p>
       </div>
       <div class="card">
-        ${ordem.map((j, i) => `<div class="lineup-row"><span class="pos">${i + 1}º</span><span class="grow"><strong>${esc(j)}</strong></span></div>`).join('')}
+        <span class="label">Anote a palavra de cada um (opcional)</span>
+        ${ordem.map((j, i) => `<div class="lineup-row"><span class="pos">${i + 1}º</span><span style="min-width:84px"><strong>${esc(j)}</strong></span><input type="text" class="pista-in grow" data-j="${esc(j)}" maxlength="30" autocomplete="off" placeholder="palavra dita" style="padding:10px"></div>`).join('')}
       </div>
+      ${htmlPistas()}
       ${p.pegos.length ? `<p class="muted small center">Fora: ${p.pegos.map(esc).join(', ')} (impostor${p.pegos.length > 1 ? 'es' : ''} pego${p.pegos.length > 1 ? 's' : ''})</p>` : ''}
       <button class="btn" id="fim">${p.rodadaFala < p.rodadasAlvo ? 'Todos falaram, próxima rodada' : 'Todos falaram, ir para a votação'}</button>
     `);
     ligarSair();
     document.getElementById('fim').onclick = () => {
+      salvarPistas();
       if (p.rodadaFala < p.rodadasAlvo) { p.rodadaFala++; telaFalas(); }
       else iniciarVotacao();
     };
+  }
+
+  function salvarPistas() {
+    const idx = p.nPistas++;
+    app.querySelectorAll('.pista-in').forEach(inp => {
+      const j = inp.dataset.j;
+      if (!p.pistas[j]) p.pistas[j] = [];
+      p.pistas[j][idx] = inp.value.trim();
+    });
+  }
+  function htmlPistas() {
+    if (!p.nPistas) return '';
+    const cols = Array.from({ length: p.nPistas }, (_, i) => i);
+    return `<div class="card"><span class="label">Palavras já ditas</span>
+      <div style="overflow-x:auto"><table class="score pistas">
+        <tr><td></td>${cols.map(i => `<td class="muted small" style="text-align:left">R${i + 1}</td>`).join('')}</tr>
+        ${p.falas.map(j => `<tr><td><strong>${esc(j)}</strong>${p.vivos.has(j) ? '' : ' <span class="muted small">(fora)</span>'}</td>${cols.map(i => `<td style="text-align:left;font-weight:600">${esc((p.pistas[j] || [])[i] || '—')}</td>`).join('')}</tr>`).join('')}
+      </table></div></div>`;
   }
 
   // ---------- votação ----------
@@ -242,6 +265,7 @@
     render(`
       <div class="topbar"><span class="pill">${esc(nome)} votando</span><button class="link-back" id="sair">Sair</button></div>
       <h2 class="center" style="margin:10px 0 16px">Quem é o impostor?</h2>
+      ${htmlPistas()}
       ${p.candidatos ? '<p class="muted small center">Desempate entre os mais votados.</p>' : ''}
       ${opcoesVoto(nome).map(j => `<button class="btn secondary" data-voto="${esc(j)}">${esc(j)}</button>`).join('')}
     `);
@@ -258,6 +282,7 @@
     render(`
       <div class="topbar"><span class="pill">${p.segundoTurno ? 'Desempate' : 'Votação aberta'}</span><button class="link-back" id="sair">Sair</button></div>
       <h2 class="center" style="margin:10px 0 6px">Quem vocês acusam?</h2>
+      ${htmlPistas()}
       <p class="muted small center" style="margin-top:0">Discutam e escolham quem teve a maioria dos votos.</p>
       ${ops.map(j => `<button class="btn secondary" data-acusado="${esc(j)}">${esc(j)}</button>`).join('')}
       <button class="btn ghost" id="empate">Deu empate</button>
@@ -360,6 +385,7 @@
         <div class="muted small">${cfg.modo === 'parecida' ? `O impostor recebeu: <strong>${esc(q.s)}</strong>` : `Dica do impostor: <strong>${esc(q.d)}</strong>`}</div>
         <p style="margin:14px 0 0">${p.impostores.size > 1 ? 'Impostores' : 'Impostor'}: <strong>${[...p.impostores].map(esc).join(' e ')}</strong></p>
       </div>
+      ${htmlPistas()}
       <div class="card"><span class="label">Placar da noite</span>${tabelaPlacar()}
         <p class="muted small" style="margin:10px 0 0">Inocentes ganham 1 ponto cada quando vencem. Impostor ganha 2.</p></div>
       <button class="btn" id="denovo">Nova partida</button>
