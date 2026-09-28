@@ -5,6 +5,7 @@
   const app = document.getElementById('app');
   const JOGO = 'carreira';
   const render = html => { app.innerHTML = html; };
+  let meuChute = null; // resultado do meu próprio chute (só eu vejo até o clube fechar)
   let sala = null, souHost = false, estado = null, presentes = [], H = null;
 
   Sala.telaEntrada(app, 'De Quem É a Carreira?', 'carreira.html', (nome, codigo, criar) => {
@@ -15,7 +16,7 @@
     sala = Sala.conectar({
       jogo: JOGO, codigo, nome, host: souHost,
       onEstado: e => { estado = e; desenhar(); },
-      onPrivado: d => { if (d && d.aviso) toast(d.aviso); },
+      onPrivado: d => { if (d && d.aviso) toast(d.aviso); if (d && d.chute) { meuChute = d.chute; desenhar(); } },
       onAcao: souHost ? acaoHost : null,
       onPresenca: l => { presentes = l; if (souHost) publicar(); else desenhar(); },
       onStatus: st => { if (st === 'SUBSCRIBED') { if (souHost) publicar(); else if (!estado) desenhar(); } }
@@ -25,13 +26,17 @@
   // ---------- anfitrião ----------
   const alvo = () => F.porId[H.alvoId];
   function publico() {
-    const a = H.alvoId ? alvo() : null, fim = H.fase === 'fimRodada' || H.fase === 'final';
+    const a = H.alvoId ? alvo() : null, fim = H.fase !== 'jogo';
+    // o que acontece no clube atual só aparece para os outros quando o clube fecha
+    const fechado = p => fim || p < H.passo;
+    const placar = { ...(H.placar || {}) };
+    if (!fim && a) Object.entries(H.acertou || {}).forEach(([id, p]) => { if (!fechado(p)) placar[id] -= a.car.length - p + 1; });
     return {
-      fase: H.fase, cfg: H.cfg, rodada: H.rodada, jogadores: H.jogadores || [], placar: H.placar || {},
+      fase: H.fase, cfg: H.cfg, rodada: H.rodada, jogadores: H.jogadores || [], placar,
       passo: H.passo, N: a ? a.car.length : 0,
       clubes: a ? a.car.slice(0, fim ? a.car.length : H.passo).map(c => ({ nome: c.nome, anos: F.anos(c) })) : [],
-      acertou: H.acertou || {}, responderam: Object.fromEntries(Object.keys(H.resp || {}).map(k => [k, true])),
-      chutes: (H.chutes || []).map(c => ({ quem: c.quem, passo: c.passo, ok: c.ok, passou: c.passou, nome: c.ok ? null : c.nome })),
+      acertou: Object.fromEntries(Object.entries(H.acertou || {}).filter(([, p]) => fechado(p))), responderam: Object.fromEntries(Object.keys(H.resp || {}).map(k => [k, true])),
+      chutes: (H.chutes || []).filter(c => fechado(c.passo)).map(c => ({ quem: c.quem, passo: c.passo, ok: c.ok, passou: c.passou, nome: c.ok ? null : c.nome })),
       revelado: fim && a ? { nome: a.nome, pos: F.descPos(a), ano: a.ano, sel: a.sel } : null
     };
   }
@@ -61,6 +66,7 @@
       H.chutes.push({ quem: msg.de, passo: H.passo, nome: j.nome, ok });
       H.resp[msg.de] = true;
       if (ok) { H.acertou[msg.de] = H.passo; H.placar[msg.de] += N - H.passo + 1; }
+      sala.privado(msg.de, { chute: { rodada: H.rodada, passo: H.passo, ok, nome: j.nome }, t: Date.now() });
     } else if (msg.tipo === 'passar') { H.chutes.push({ quem: msg.de, passo: H.passo, passou: true }); H.resp[msg.de] = true; }
     else return;
     checar();
@@ -103,14 +109,16 @@
 
   function telaJogo() {
     const eu = estado.jogadores.some(j => j.id === sala.id);
-    const acertei = estado.acertou[sala.id], respondi = estado.responderam[sala.id];
-    const doPasso = estado.chutes.filter(c => c.passo === estado.passo);
+    const meu = meuChute && meuChute.rodada === estado.rodada ? meuChute : null;
+    const acertei = estado.acertou[sala.id] || (meu && meu.ok ? meu.passo : null), respondi = estado.responderam[sala.id];
+    const errei = !acertei && respondi && meu && meu.passo === estado.passo && !meu.ok ? meu.nome : null;
+    const doPasso = estado.chutes;
     if (document.getElementById('busca') && eu && !acertei && !respondi && document.getElementById('passoAtual')?.dataset.p == estado.rodada + '-' + estado.passo) {
       const st = document.getElementById('statusBox'); if (st) st.innerHTML = statusHtml(doPasso); return;
     }
     render(`${topo(`Rodada ${estado.rodada}/${estado.cfg.rodadas} · clube ${estado.passo}/${estado.N}`)}<span id="passoAtual" data-p="${estado.rodada}-${estado.passo}"></span>
       <div class="card"><span class="label">A carreira</span>${lista(false)}</div>
-      ${!eu ? '<p class="muted center">Você está assistindo.</p>' : acertei ? `<div class="card center">✅ Você acertou no ${acertei}º clube! Aguardando os outros…</div>` : respondi ? '<div class="card center muted">Chute enviado. Aguardando os outros…</div>' : `
+      ${!eu ? '<p class="muted center">Você está assistindo.</p>' : acertei ? `<div class="card center">✅ Você acertou no ${acertei}º clube! Aguardando os outros…</div>` : respondi ? `<div class="card center muted">${errei ? `❌ Não é ${esc(errei)}. ` : ''}Aguardando os outros…</div>` : `
         <div class="card"><p style="margin:0 0 8px"><strong>De quem é essa carreira?</strong> <span class="muted small">(vale ${estado.N - estado.passo + 1} pts)</span></p>
           ${F.htmlBusca('busca')}<button class="btn" id="chutar" disabled>Chutar</button><button class="btn ghost" id="passar">Passar (esperar mais um clube)</button></div>`}
       <div id="statusBox">${statusHtml(doPasso)}</div>
@@ -127,7 +135,7 @@
       const a = estado.acertou[j.id], r = estado.responderam[j.id];
       return `<span class="chip ${a || r ? 'on' : ''}">${a ? '✅' : r ? '🕐' : '⏳'} ${esc(j.nome)}</span>`;
     }).join('')}</div>
-    ${doPasso.filter(c => !c.ok && !c.passou).length ? `<p class="muted small center">Chutes errados neste clube: ${doPasso.filter(c => !c.ok && !c.passou).map(c => esc(c.nome)).join(', ')}</p>` : ''}`;
+    ${doPasso.filter(c => !c.ok && !c.passou).length ? `<p class="muted small center">Chutes errados nos clubes anteriores: ${doPasso.filter(c => !c.ok && !c.passou).map(c => esc(c.nome)).join(', ')}</p>` : ''}`;
 
   function telaFimRodada() {
     const r = estado.revelado;

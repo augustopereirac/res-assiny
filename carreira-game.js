@@ -73,27 +73,39 @@
   }
 
   function telaChute(nome) {
-    const doPasso = p.chutes.filter(c => c.passo === p.passo);
+    // o que os outros fizeram NESTE clube fica escondido até o clube fechar
+    const antes = p.chutes.filter(c => c.passo < p.passo && !c.ok && !c.passou);
     let escolhido = null;
     render(`${cab()}
       <div class="card"><span class="label">A carreira</span>${htmlCarreira(p.passo)}</div>
-      ${doPasso.length ? `<div class="card"><span class="label">Chutes deste clube</span>${doPasso.map(c => `<p class="small" style="margin:4px 0">${esc(c.quem)}: ${c.ok ? '✅ acertou!' : c.passou ? 'passou' : '❌ ' + esc(c.nome)}</p>`).join('')}</div>` : ''}
+      ${antes.length ? `<p class="muted small center">Chutes errados nos clubes anteriores: ${antes.map(c => esc(c.nome)).join(', ')}</p>` : ''}
       <div class="card"><p style="margin:0 0 8px"><strong style="font-size:1.25rem">${esc(nome)}</strong>, de quem é essa carreira? <span class="muted small">(vale ${N() - p.passo + 1} pts)</span></p>
         ${F.htmlBusca('busca')}
         <button class="btn" id="chutar" disabled>Chutar</button>
         <button class="btn ghost" id="passar">Passar (esperar mais um clube)</button></div>
-      <div class="card"><span class="label">Placar</span>${placar()}</div>`);
+      <div class="card"><span class="label">Placar</span>${placar(true)}</div>`);
     ligarSair();
     const bt = document.getElementById('chutar');
     F.ligarBusca('busca', j => { escolhido = j; bt.disabled = !j; });
     bt.onclick = () => {
       const ok = escolhido.id === p.alvo.id;
       p.chutes.push({ quem: nome, passo: p.passo, nome: escolhido.nome, ok });
-      if (ok) { p.acertou[nome] = p.passo; p.placar[nome] += N() - p.passo + 1; toast(`✅ ${nome} acertou! +${N() - p.passo + 1}`); }
-      else { toast('❌ Não é ele.'); p.vez++; }
-      proximoChute();
+      const pts = N() - p.passo + 1;
+      if (ok) { p.acertou[nome] = p.passo; p.placar[nome] += pts; }
+      else p.vez++;
+      telaResultado(nome, ok ? `✅ Acertou! +${pts} pts` : `❌ Não é ${esc(escolhido.nome)}.`);
     };
-    document.getElementById('passar').onclick = () => { p.chutes.push({ quem: nome, passo: p.passo, passou: true }); p.vez++; proximoChute(); };
+    document.getElementById('passar').onclick = () => { p.chutes.push({ quem: nome, passo: p.passo, passou: true }); p.vez++; telaResultado(nome, 'Você passou.'); };
+  }
+
+  // resultado só para quem chutou; depois passa o celular (sem entregar nada ao próximo)
+  function telaResultado(nome, msg) {
+    const faltam = pend(), prox = faltam.length && p.vez < faltam.length ? faltam[p.vez] : null;
+    render(`${cab()}<div class="pass"><div class="emoji">🤫</div><p class="muted">${esc(nome)}</p><div class="big-name" style="font-size:1.6rem">${msg}</div>
+      <p class="muted small">Não conte para os outros!</p>
+      <button class="btn" id="seguir">${prox ? 'Passar o celular para ' + esc(prox) : 'Continuar'}</button></div>`);
+    ligarSair();
+    document.getElementById('seguir').onclick = proximoChute;
   }
 
   function fimRodada() {
@@ -111,7 +123,8 @@
   }
 
   const ranking = () => Object.entries(p.placar).sort((a, b) => b[1] - a[1]);
-  const placar = () => `<table class="score">${ranking().map(([n, v]) => `<tr><td>${esc(n)}</td><td>${C.plural(v, 'pt')}</td></tr>`).join('')}</table>`;
+  // escondido = não mostra os pontos ganhos no clube que ainda está aberto
+  const placar = (escondido) => `<table class="score">${(escondido ? Object.entries(p.placar).map(([n, v]) => [n, p.acertou[n] === p.passo ? v - (N() - p.passo + 1) : v]).sort((a, b) => b[1] - a[1]) : ranking()).map(([n, v]) => `<tr><td>${esc(n)}</td><td>${C.plural(v, 'pt')}</td></tr>`).join('')}</table>`;
 
   function telaFinal() {
     const rank = ranking(), top = rank[0][1], camp = rank.filter(r => r[1] === top).map(r => r[0]);
