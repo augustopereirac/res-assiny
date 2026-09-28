@@ -20,17 +20,20 @@
   Sala.telaEntrada(app, 'No Limite', 'nolimite.html', (nome, codigo, criar) => {
     souHost = criar || Sala.souHostDe(JOGO) === codigo;
     history.replaceState(null, '', '?sala=' + codigo);
-    if (souHost) {
+    const iniciarH = () => {
       H = Sala.carregarHost(JOGO, codigo) || {
         cfg: { rodadas: 10, temas: TEMAS.slice() },
         fase: 'lobby', rodada: 0, jogadores: [], placar: {}, usadas: [], pergunta: null, palpites: {}, resultado: null, historico: []
       };
-    }
+    };
+    if (souHost) iniciarH();
     render('<div class="pass"><div class="emoji">📡</div><p class="muted">Conectando…</p></div>');
     sala = Sala.conectar({
       jogo: JOGO, codigo, nome, host: souHost,
       onEstado: e => { if (e.fase === 'lobby' || e.rodada !== rodadaPalpite) meuPalpite = null; estado = e; desenhar(); },
-      onAcao: souHost ? acaoHost : null,
+      onAcao: acaoHost, snapshot: () => H,
+      onVirarHost: h => { if (h) Sala.salvarHost(JOGO, codigo, h); souHost = true; iniciarH(); app.innerHTML = ''; toast('👑 O anfitrião saiu. Agora você é o anfitrião da sala.'); publicar(); },
+      onDeixarHost: () => { souHost = false; const b = document.getElementById('barraAusentes'); if (b) b.remove(); },
       onPresenca: lista => { presentes = lista; if (souHost) publicar(); else desenhar(); },
       onStatus: st => { if (st === 'SUBSCRIBED') { if (souHost) publicar(); else if (!estado) desenhar(); } if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') toast('Problema de conexão. Tentando de novo…'); }
     });

@@ -289,3 +289,5 @@ table.score.pistas td:last-child { text-align: left; }
 .cad-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
 .cad-chips .chip{padding:6px 10px;font-size:.85rem}
 table.score.rank th{font-size:.75rem;color:var(--muted,#9aa);text-align:left;font-weight:600;padding-bottom:6px}
+.barra-ausentes{position:fixed;left:12px;right:12px;bottom:12px;z-index:60;display:flex;gap:10px;align-items:center;justify-content:space-between;background:#3a1d24;border:1px solid #ff7b7b;border-radius:14px;padding:10px 12px;font-size:.9rem;box-shadow:0 6px 24px rgba(0,0,0,.4)}
+.barra-ausentes .btn{width:auto;margin:0;white-space:nowrap}

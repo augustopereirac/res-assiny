@@ -12,13 +12,16 @@
   Sala.telaEntrada(app, 'De Quem É a Carreira?', 'carreira.html', (nome, codigo, criar) => {
     souHost = criar || Sala.souHostDe(JOGO) === codigo;
     history.replaceState(null, '', '?sala=' + codigo);
-    if (souHost) H = Sala.carregarHost(JOGO, codigo) || { cfg: { pool: 'famosos', rodadas: 5 }, fase: 'lobby', vistos: [] };
+    const iniciarH = () => { H = Sala.carregarHost(JOGO, codigo) || { cfg: { pool: 'famosos', rodadas: 5 }, fase: 'lobby', vistos: [] }; };
+    if (souHost) iniciarH();
     render('<div class="pass"><div class="emoji">📡</div><p class="muted">Conectando…</p></div>');
     sala = Sala.conectar({
       jogo: JOGO, codigo, nome, host: souHost,
       onEstado: e => { estado = e; desenhar(); },
       onPrivado: d => { if (d && d.aviso) toast(d.aviso); if (d && d.chute) { meuChute = d.chute; if (!meusChutes.some(x => x.rodada === d.chute.rodada && x.passo === d.chute.passo)) meusChutes.push(d.chute); desenhar(); } },
-      onAcao: souHost ? acaoHost : null,
+      onAcao: acaoHost, snapshot: () => H,
+      onVirarHost: h => { if (h) Sala.salvarHost(JOGO, codigo, h); souHost = true; iniciarH(); app.innerHTML = ''; toast('👑 O anfitrião saiu. Agora você é o anfitrião da sala.'); publicar(); },
+      onDeixarHost: () => { souHost = false; const b = document.getElementById('barraAusentes'); if (b) b.remove(); },
       onPresenca: l => { presentes = l; if (souHost) publicar(); else desenhar(); },
       onStatus: st => { if (st === 'SUBSCRIBED') { if (souHost) publicar(); else if (!estado) desenhar(); } }
     });

@@ -30,61 +30,150 @@
   const gerarCodigo = () => Array.from({ length: 4 }, () => LETRAS[Math.floor(Math.random() * LETRAS.length)]).join('');
   const normCodigo = c => String(c || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
 
-  // conectar({ jogo, codigo, nome, host, onEstado, onPrivado, onAcao, onPresenca, onStatus })
+  // conectar({ jogo, codigo, nome, host, onEstado, onPrivado, onAcao, onPresenca, onStatus, snapshot, onVirarHost, onDeixarHost })
+  // Troca de anfitrião: o anfitrião manda de tempos em tempos uma cópia do estado dele (snapshot).
+  // Se ele sair da sala, quem entrou primeiro depois dele vira anfitrião com essa cópia e o jogo continua.
   function conectar(o) {
     const id = meuId();
     const sb = cliente();
     const ch = sb.channel(`noite-${o.jogo}-${o.codigo}`, { config: { broadcast: { self: false }, presence: { key: id } } });
-    let ultimoEstado = null;
+    const chaveSnap = `noite:snap:${o.jogo}:${o.codigo}`;
+    let ultimoEstado = null, ehHost = false, aguardando = !!o.host, hs = 0, meuT = Date.now(), inscrito = false, timerEleicao = null, timerSnap = null, ultimoSnapEnvio = 0;
+    let snap = null;
+    try { snap = JSON.parse(localStorage.getItem(chaveSnap) || 'null'); } catch (e) {}
     const privados = {}; // para: dados (anfitrião guarda para reenviar)
+    const track = () => ch.track({ nome: o.nome, host: ehHost, hs, t: meuT }).catch(() => {});
+    const membros = () => Object.entries(ch.presenceState()).map(([pid, metas]) => ({ id: pid, ...(metas[0] || {}) }));
+
+    function enviarSnap() {
+      if (!ehHost || !o.snapshot) return;
+      const agora = Date.now(), falta = 1000 - (agora - ultimoSnapEnvio);
+      if (falta > 0) { if (!timerSnap) timerSnap = setTimeout(() => { timerSnap = null; enviarSnap(); }, falta); return; }
+      ultimoSnapEnvio = agora;
+      try {
+        const h = JSON.parse(JSON.stringify(o.snapshot() || null));
+        ch.send({ type: 'broadcast', event: 'snap', payload: { h, privados, estado: ultimoEstado, hs } });
+      } catch (e) {}
+    }
+    function virarHost() {
+      ehHost = true; aguardando = false; hs = Date.now(); track();
+      if (snap && snap.privados) Object.assign(privados, snap.privados);
+      if (snap && snap.estado) ultimoEstado = snap.estado;
+      try { ss.set(`noite:souHost:${o.jogo}`, o.codigo); } catch (e) {}
+      if (o.onVirarHost) o.onVirarHost(snap ? snap.h : null);
+      enviarSnap();
+    }
+    function deixarHost() {
+      const era = ehHost; ehHost = false; aguardando = false; hs = 0; track();
+      try { if (ss.get(`noite:souHost:${o.jogo}`) === o.codigo) sessionStorage.removeItem(`noite:souHost:${o.jogo}`); } catch (e) {}
+      ch.send({ type: 'broadcast', event: 'acao', payload: { de: id, nome: o.nome, tipo: 'oi', dados: {} } });
+      if (o.onDeixarHost) o.onDeixarHost(era);
+    }
+    function avaliar() {
+      if (!inscrito) return;
+      const ms = membros(), outrosHosts = ms.filter(m => m.id !== id && m.host);
+      if (aguardando) return;
+      if (ehHost) {
+        // dois anfitriões (ex.: o antigo voltou): fica quem virou anfitrião antes
+        const ganha = outrosHosts.find(m => (m.hs || 0) < hs || ((m.hs || 0) === hs && m.id < id));
+        if (ganha) deixarHost();
+        return;
+      }
+      if (outrosHosts.length) { clearTimeout(timerEleicao); timerEleicao = null; return; }
+      if (timerEleicao) return;
+      // ninguém é anfitrião: espera um pouco (pode ser só uma reconexão) e o primeiro da fila assume
+      timerEleicao = setTimeout(() => {
+        timerEleicao = null;
+        const ms2 = membros();
+        if (ms2.some(m => m.host)) return;
+        const fila = ms2.filter(m => m.t).sort((a, b) => (a.t - b.t) || (a.id < b.id ? -1 : 1));
+        if (fila.length && fila[0].id === id) virarHost();
+      }, 3000);
+    }
 
     const api = {
-      id, codigo: o.codigo, host: !!o.host, nome: o.nome,
+      id, codigo: o.codigo, nome: o.nome,
+      get host() { return ehHost; },
       enviar(tipo, dados) {
         const msg = { de: id, nome: o.nome, tipo, dados: dados || {} };
-        if (o.host) { if (o.onAcao) o.onAcao(msg); return; }
+        if (ehHost) { if (o.onAcao) o.onAcao(msg); return; }
         ch.send({ type: 'broadcast', event: 'acao', payload: msg });
       },
       publicar(estado) {
+        if (!ehHost) return;
         ultimoEstado = estado;
         ch.send({ type: 'broadcast', event: 'estado', payload: estado });
         if (o.onEstado) o.onEstado(estado);
+        enviarSnap();
       },
       privado(para, dados) {
+        if (!ehHost) return;
         privados[para] = dados;
         if (para === id) { if (o.onPrivado) o.onPrivado(dados); return; }
         ch.send({ type: 'broadcast', event: 'privado', payload: { para, dados } });
       },
       limparPrivados() { Object.keys(privados).forEach(k => delete privados[k]); },
       jogadores() {
-        const st = ch.presenceState();
-        return Object.entries(st).map(([pid, metas]) => ({ id: pid, nome: (metas[0] || {}).nome || '?', host: !!(metas[0] || {}).host, t: (metas[0] || {}).t || 0 }))
+        return membros().map(m => ({ id: m.id, nome: m.nome || '?', host: !!m.host, t: m.t || 0 }))
           .sort((a, b) => (b.host - a.host) || (a.t - b.t));
       },
       sair() { try { ch.untrack(); sb.removeChannel(ch); } catch (e) {} }
     };
 
-    ch.on('broadcast', { event: 'estado' }, ({ payload }) => { if (!o.host && o.onEstado) o.onEstado(payload); });
-    ch.on('broadcast', { event: 'privado' }, ({ payload }) => { if (!o.host && payload && payload.para === id && o.onPrivado) o.onPrivado(payload.dados); });
+    ch.on('broadcast', { event: 'estado' }, ({ payload }) => { if (!ehHost && o.onEstado) o.onEstado(payload); });
+    ch.on('broadcast', { event: 'snap' }, ({ payload }) => {
+      if (ehHost || !payload) return;
+      snap = payload;
+      try { localStorage.setItem(chaveSnap, JSON.stringify(payload)); } catch (e) {}
+    });
+    ch.on('broadcast', { event: 'privado' }, ({ payload }) => { if (!ehHost && payload && payload.para === id && o.onPrivado) o.onPrivado(payload.dados); });
     ch.on('broadcast', { event: 'acao' }, ({ payload }) => {
-      if (!o.host) return;
+      if (!ehHost) return;
       if (payload && payload.tipo === 'oi') {
         // alguém entrou/recarregou: reenvia estado e o privado dele
         if (ultimoEstado) ch.send({ type: 'broadcast', event: 'estado', payload: ultimoEstado });
         if (privados[payload.de] !== undefined) ch.send({ type: 'broadcast', event: 'privado', payload: { para: payload.de, dados: privados[payload.de] } });
+        enviarSnap();
       }
       if (o.onAcao) o.onAcao(payload);
     });
-    ch.on('presence', { event: 'sync' }, () => { if (o.onPresenca) o.onPresenca(api.jogadores()); });
+    ch.on('presence', { event: 'sync' }, () => { avaliar(); if (o.onPresenca) o.onPresenca(api.jogadores()); });
 
     ch.subscribe(async status => {
       if (status === 'SUBSCRIBED') {
-        await ch.track({ nome: o.nome, host: !!o.host, t: Date.now() });
-        if (!o.host) ch.send({ type: 'broadcast', event: 'acao', payload: { de: id, nome: o.nome, tipo: 'oi', dados: {} } });
+        inscrito = true;
+        await track();
+        if (aguardando) {
+          // quer ser anfitrião (criou a sala ou recarregou): confere se já não tem outro anfitrião na sala
+          setTimeout(() => {
+            if (!aguardando) return;
+            const outro = membros().some(m => m.id !== id && m.host);
+            aguardando = false;
+            if (outro) { deixarHost(); if (o.onStatus) o.onStatus(status); return; }
+            ehHost = true; hs = hs || Date.now(); track();
+            if (o.onStatus) o.onStatus(status);
+            enviarSnap();
+          }, 1200);
+          return;
+        }
+        ch.send({ type: 'broadcast', event: 'acao', payload: { de: id, nome: o.nome, tipo: 'oi', dados: {} } });
+        avaliar();
       }
       if (o.onStatus) o.onStatus(status);
     });
+    global.addEventListener && global.addEventListener('pagehide', () => { try { ch.untrack(); } catch (e) {} });
     return api;
+  }
+
+  // Aviso para o anfitrião quando alguém da partida saiu da sala (o jogo não trava esperando por ele).
+  // ativos: ids que o jogo espera; presentes: [{id}]; nome(id); onTirar(ids)
+  function barraAusentes(ativos, presentes, nome, onTirar) {
+    let bar = document.getElementById('barraAusentes');
+    const aus = (ativos || []).filter(id => !presentes.some(p => p.id === id));
+    if (!aus.length) { if (bar) bar.remove(); return; }
+    if (!bar) { bar = document.createElement('div'); bar.id = 'barraAusentes'; bar.className = 'barra-ausentes'; document.body.appendChild(bar); }
+    bar.innerHTML = `<span>🚪 ${aus.map(id => C.esc(nome(id))).join(', ')} saiu da sala.</span><button class="btn small" id="tirarAusentes">Tirar da partida</button>`;
+    bar.querySelector('#tirarAusentes').onclick = () => { bar.remove(); onTirar(aus); };
   }
 
   // ---------- telas comuns ----------
@@ -182,5 +271,5 @@
   const carregarHost = (jogo, codigo) => { try { return JSON.parse(localStorage.getItem(`noite:host:${jogo}:${codigo}`) || 'null'); } catch (e) { return null; } };
   const souHostDe = jogo => ss.get(`noite:souHost:${jogo}`);
 
-  global.Sala = { conectar, telaEntrada, htmlCodigo, ligarCodigo, htmlJogadores, gerarCodigo, meuId, salvarHost, carregarHost, souHostDe, linkSala };
+  global.Sala = { conectar, barraAusentes, telaEntrada, htmlCodigo, ligarCodigo, htmlJogadores, gerarCodigo, meuId, salvarHost, carregarHost, souHostDe, linkSala };
 })(window);

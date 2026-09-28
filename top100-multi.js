@@ -18,19 +18,22 @@
   Sala.telaEntrada(app, 'Top 100', 'top100.html', (nome, codigo, criar) => {
     souHost = criar || Sala.souHostDe(JOGO) === codigo;
     history.replaceState(null, '', '?sala=' + codigo);
-    if (souHost) {
+    const iniciarH = () => {
       H = Sala.carregarHost(JOGO, codigo) || {
         cfg: { lista: 'sortear', estilo: url.get('estilo') || 'pontos', tamanho: +(url.get('n') || 100), modo: 'rodadas', rodadas: 10, alvoMult: 3 },
         fase: 'lobby', partida: 0
       };
       if (H.listaId) prepararMatchers();
-    }
+    };
+    if (souHost) iniciarH();
     render('<div class="pass"><div class="emoji">📡</div><p class="muted">Conectando…</p></div>');
     sala = Sala.conectar({
       jogo: JOGO, codigo, nome, host: souHost,
       onEstado: e => { estado = e; desenhar(); },
       onPrivado: d => { if (d && d.aviso) toast(d.aviso); },
-      onAcao: souHost ? acaoHost : null,
+      onAcao: acaoHost, snapshot: () => H,
+      onVirarHost: h => { if (h) Sala.salvarHost(JOGO, codigo, h); souHost = true; iniciarH(); app.innerHTML = ''; toast('👑 O anfitrião saiu. Agora você é o anfitrião da sala.'); publicar(); },
+      onDeixarHost: () => { souHost = false; const b = document.getElementById('barraAusentes'); if (b) b.remove(); },
       onPresenca: lista => { presentes = lista; if (souHost) publicar(); else desenhar(); },
       onStatus: st => { if (st === 'SUBSCRIBED') { if (souHost) publicar(); else if (!estado) desenhar(); } if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') toast('Problema de conexão. Tentando de novo…'); }
     });
@@ -63,7 +66,7 @@
       acabouLista: H.acabouLista || false
     };
   }
-  function publicar() { Sala.salvarHost(JOGO, sala.codigo, H); sala.publicar(publico()); }
+  function publicar() { Sala.salvarHost(JOGO, sala.codigo, H); sala.publicar(publico()); Sala.barraAusentes(['jogo', 'fimRodada'].includes(H.fase) ? (H.cfg.estilo === 'duvido' ? H.vivos : H.ordem) || [] : [], presentes, nomeId, tirar); }
 
   function iniciar() {
     const js = presentes.map(p => ({ id: p.id, nome: p.nome }));
@@ -81,7 +84,7 @@
     publicar();
   }
   function ordenar() {
-    const ids = H.jogadores.map(j => j.id), n = ids.length;
+    const ids = H.jogadores.map(j => j.id).filter(id => !(H.fora || []).includes(id)), n = ids.length;
     const ini = ((H.offset || 0) + H.rodada - 1) % n;
     H.ordem = ids.slice(ini).concat(ids.slice(0, ini));
   }
@@ -130,6 +133,9 @@
     c.rodada = H.rodada; H.chutes.push(c); H.placar[c.jogador] += c.pontos;
     H.msg = { tipo: c.idx != null ? 'exact' : 'bust', html: `${esc(nomeId(c.jogador))}: ${c.idx != null ? `#${M.itens[c.idx].pos} · ${esc(M.itens[c.idx].nome)}${M.itens[c.idx].info ? ' · ' + esc(M.itens[c.idx].info) : ''}` : c.passou ? 'passou a vez' : c.foraPos ? `“${esc(c.texto)}” é o #${c.foraPos}, fora do Top ${H.N}` : `“${esc(c.texto)}” não está na lista`} <strong>(${c.pontos ? '+' + c.pontos : '0'})</strong>` };
     H.vez++;
+    seguir();
+  }
+  function seguir() {
     if (H.usados.length >= M.itens.length) { H.acabouLista = true; H.fase = 'final'; return publicar(); }
     if (H.vez < H.ordem.length) return publicar();
     const meta = H.cfg.estilo === 'pontos' && H.cfg.modo === 'pontos' && Object.values(H.placar).some(p => p >= H.cfg.alvoMult * H.cfg.tamanho);
@@ -138,6 +144,25 @@
     publicar();
   }
   function proximaRodada() { H.rodada++; H.vez = 0; H.msg = null; ordenar(); H.fase = 'jogo'; publicar(); }
+
+  // quem saiu da sala sai da partida (o jogo não fica esperando)
+  function tirar(xs) {
+    H.fora = [...new Set([...(H.fora || []), ...xs])];
+    if (H.cfg.estilo === 'duvido') {
+      const atual = H.ordem[H.vez];
+      H.vivos = H.vivos.filter(v => !xs.includes(v));
+      if (H.pendente && xs.includes(H.pendente.jogador)) H.pendente = null;
+      if (H.fase !== 'jogo') return publicar();
+      if (checarFimDuvido()) return publicar();
+      if (H.pendente && H.vivos.filter(v => v !== H.pendente.jogador).every(o => H.pendente.passes.includes(o))) return aceitarSemDuvida();
+      if (xs.includes(atual)) { avancarPonteiro(); pularMortosEFolgas(); }
+      return publicar();
+    }
+    const antes = H.ordem.slice(0, H.vez).filter(x => !xs.includes(x)).length;
+    H.ordem = H.ordem.filter(x => !xs.includes(x)); H.vez = antes;
+    if (H.fase === 'jogo' && H.vez >= H.ordem.length) { H.vez = H.ordem.length; return seguir(); }
+    publicar();
+  }
 
   // --- duvido ---
   function avancarPonteiro() { do { H.vez = (H.vez + 1) % H.ordem.length; } while (!H.vivos.includes(H.ordem[H.vez])); }

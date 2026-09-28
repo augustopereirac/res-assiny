@@ -14,12 +14,13 @@
   Sala.telaEntrada(app, 'Impostor', 'impostor.html', (nome, codigo, criar) => {
     souHost = criar || Sala.souHostDe(JOGO) === codigo;
     history.replaceState(null, '', '?sala=' + codigo);
-    if (souHost) {
+    const iniciarH = () => {
       H = Sala.carregarHost(JOGO, codigo) || {
         cfg: { grupo: 'Futebol', cats: CATS('Futebol'), modo: 'dica', impostores: 1, rodadas: 2 },
         fase: 'lobby', jogadores: [], placar: {}, usadas: [], partida: 0
       };
-    }
+    };
+    if (souHost) iniciarH();
     render('<div class="pass"><div class="emoji">📡</div><p class="muted">Conectando…</p></div>');
     sala = Sala.conectar({
       jogo: JOGO, codigo, nome, host: souHost,
@@ -29,7 +30,9 @@
         estado = e; desenhar();
       },
       onPrivado: d => { carta = d; desenhar(); },
-      onAcao: souHost ? acaoHost : null,
+      onAcao: acaoHost, snapshot: () => H,
+      onVirarHost: h => { if (h) Sala.salvarHost(JOGO, codigo, h); souHost = true; iniciarH(); app.innerHTML = ''; toast('👑 O anfitrião saiu. Agora você é o anfitrião da sala.'); publicar(); reenviarCartas(); },
+      onDeixarHost: () => { souHost = false; const b = document.getElementById('barraAusentes'); if (b) b.remove(); },
       onPresenca: lista => { presentes = lista; if (souHost) publicar(); else desenhar(); },
       onStatus: st => { if (st === 'SUBSCRIBED') { if (souHost) { publicar(); reenviarCartas(); } else if (!estado) desenhar(); } if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') toast('Problema de conexão. Tentando de novo…'); }
     });
@@ -50,7 +53,7 @@
       fim: fim ? H.fim : null
     };
   }
-  function publicar() { Sala.salvarHost(JOGO, sala.codigo, H); sala.publicar(publico()); }
+  function publicar() { Sala.salvarHost(JOGO, sala.codigo, H); sala.publicar(publico()); Sala.barraAusentes(['cartas', 'pistas', 'votacao'].includes(H.fase) ? H.vivos || [] : [], presentes, nomeId, tirar); }
   function reenviarCartas() { if (H && H.cartas) Object.entries(H.cartas).forEach(([id, c]) => sala.privado(id, c)); }
 
   function acaoHost(msg) {
@@ -64,6 +67,15 @@
       H.votos[msg.de] = msg.dados.em;
       if (H.vivos.every(v => H.votos[v])) apurar(); else publicar();
     }
+  }
+
+  // quem saiu da sala sai da partida (o jogo não fica esperando o voto dele)
+  function tirar(xs) {
+    H.vivos = H.vivos.filter(v => !xs.includes(v));
+    xs.forEach(x => { delete H.votos[x]; Object.keys(H.votos).forEach(k => { if (H.votos[k] === x) delete H.votos[k]; }); });
+    if (!H.impostores.some(i => H.vivos.includes(i))) return fim(true, 'O impostor saiu da sala.');
+    if (H.fase === 'votacao' && H.vivos.every(v => H.votos[v])) return apurar();
+    publicar();
   }
 
   function sortearPalavra() {

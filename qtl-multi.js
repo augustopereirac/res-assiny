@@ -15,16 +15,19 @@
   Sala.telaEntrada(app, 'Quem Tava Lá', 'qtl.html', (nome, codigo, criar) => {
     souHost = criar || Sala.souHostDe(JOGO) === codigo;
     history.replaceState(null, '', '?sala=' + codigo);
-    if (souHost) {
+    const iniciarH = () => {
       H = Sala.carregarHost(JOGO, codigo) || { cfg: { modo: 'duvido', jogo: 'sortear' }, fase: 'lobby', partida: 0, vistos: [] };
       if (H.jogoId) preparar();
-    }
+    };
+    if (souHost) iniciarH();
     render('<div class="pass"><div class="emoji">📡</div><p class="muted">Conectando…</p></div>');
     sala = Sala.conectar({
       jogo: JOGO, codigo, nome, host: souHost,
       onEstado: e => { estado = e; desenhar(); },
       onPrivado: d => { if (d && d.aviso) toast(d.aviso); },
-      onAcao: souHost ? acaoHost : null,
+      onAcao: acaoHost, snapshot: () => H,
+      onVirarHost: h => { if (h) Sala.salvarHost(JOGO, codigo, h); souHost = true; iniciarH(); app.innerHTML = ''; toast('👑 O anfitrião saiu. Agora você é o anfitrião da sala.'); publicar(); },
+      onDeixarHost: () => { souHost = false; const b = document.getElementById('barraAusentes'); if (b) b.remove(); },
       onPresenca: lista => { presentes = lista; if (souHost) publicar(); else desenhar(); },
       onStatus: st => { if (st === 'SUBSCRIBED') { if (souHost) publicar(); else if (!estado) desenhar(); } if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') toast('Problema de conexão. Tentando de novo…'); }
     });
@@ -58,7 +61,7 @@
       listaJogos: H.fase === 'lobby' ? null : undefined
     };
   }
-  function publicar() { Sala.salvarHost(JOGO, sala.codigo, H); sala.publicar(publico()); }
+  function publicar() { Sala.salvarHost(JOGO, sala.codigo, H); sala.publicar(publico()); Sala.barraAusentes(H.fase === 'jogo' ? H.vivos || [] : [], presentes, nomeId, tirar); }
 
   function iniciar() {
     const js = presentes.map(p => ({ id: p.id, nome: p.nome }));
@@ -119,6 +122,19 @@
     }
   }
 
+  // quem saiu da sala sai da partida (o jogo não fica esperando)
+  function tirar(xs) {
+    const atual = H.ordem[H.vez];
+    xs.forEach(x => H.log.push(`${nomeId(x)} saiu da sala.`));
+    H.vivos = H.vivos.filter(v => !xs.includes(v));
+    if (H.pendente && xs.includes(H.pendente.jogador)) H.pendente = null;
+    if (H.juiz && xs.includes(H.juiz.jogador)) H.juiz = null;
+    if (H.fase !== 'jogo') return publicar();
+    if (H.vivos.length <= 1) { H.fase = 'final'; return publicar(); }
+    if (H.pendente && H.vivos.filter(v => v !== H.pendente.jogador).every(o => H.pendente.passes.includes(o))) return aceitarSemDuvida();
+    if (xs.includes(atual) && !H.pendente && !H.juiz) { avancar(); pular(); }
+    publicar();
+  }
   function avancar() { do { H.vez = (H.vez + 1) % H.ordem.length; } while (!H.vivos.includes(H.ordem[H.vez])); }
   function pular() {
     const avisos = [];
