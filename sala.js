@@ -135,6 +135,7 @@
       <div class="card">
         <span class="label">Seu nome</span>
         <input type="text" id="meuNome" maxlength="20" autocomplete="off" placeholder="Como te chamam" value="${C.esc(nome)}">
+        <div id="cadBox"></div>
       </div>
       ${codigoUrl ? `
         <div class="card center"><div class="muted small">Entrando na sala</div><div class="sala-codigo">${codigoUrl}</div></div>
@@ -149,9 +150,17 @@
         <button class="btn" id="criar">Criar uma sala nova</button>
       `}
     `;
+    const R = global.Ranking;
+    const chips = () => {
+      const box = document.getElementById('cadBox'); if (!box || !R) return;
+      box.innerHTML = R.htmlChips([], 'data-eu').replace('Cadastrados:', 'Toque no seu nome:').replace(/\+ /g, '');
+      box.querySelectorAll('[data-eu]').forEach(b => b.onclick = () => { document.getElementById('meuNome').value = b.dataset.eu; box.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === b)); });
+    };
+    if (R) { chips(); R.atualizar().then(chips); }
     const pegarNome = () => {
-      const n = document.getElementById('meuNome').value.trim();
+      let n = document.getElementById('meuNome').value.trim();
       if (!n) { C.toast('Coloque seu nome.'); return null; }
+      if (R) { n = R.canonico(n); R.cadastrar(n); }
       C.store.set('meuNome', n);
       return n;
     };

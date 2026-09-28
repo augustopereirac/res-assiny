@@ -463,6 +463,7 @@
     let campeoes, cabecalhoFinal, podio = '', placarHtml = '';
     if (cfg.estilo === 'duvido') {
       campeoes = jogo.ordem.filter(j => jogo.vivos.has(j));
+      window.Ranking && Ranking.registrar(jogo, 'top100', jogo.ordem, campeoes);
       cabecalhoFinal = (acabouLista ? 'A lista acabou! ' : '') + (campeoes.length > 1 ? 'Sobreviventes' : 'Último em pé');
     } else {
       const rank = ranking();
@@ -470,6 +471,7 @@
       campeoes = rank.filter(r => r[1] === topo).map(r => r[0]);
       cabecalhoFinal = (acabouLista ? 'A lista acabou! ' : '') + (campeoes.length > 1 ? 'Empate! Campeões da vez' : 'Campeão da vez');
       podio = C.htmlPodio(rank);
+      window.Ranking && Ranking.registrar(jogo, 'top100', cfg.jogadores, campeoes);
       const melhor = jogo.chutes.filter(c => c.item).sort((a, b) => cfg.estilo === 'reverso' ? a.pontos - b.pontos : b.pontos - a.pontos)[0];
       placarHtml = `<div class="card"><span class="label">Classificação final${cfg.estilo === 'reverso' ? ' (menos é melhor)' : ''}</span>${miniPlacar()}
         ${melhor ? `<p class="muted small" style="margin:12px 0 0">💎 Melhor chute: <strong>${esc(melhor.jogador)}</strong> com ${esc(melhor.item.nome)} (#${melhor.item.pos})</p>` : ''}</div>`;

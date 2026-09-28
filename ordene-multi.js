@@ -37,7 +37,7 @@
   function iniciar() {
     const js = presentes.map(p => ({ id: p.id, nome: p.nome }));
     if (!js.length) return;
-    H.jogadores = js; H.placar = Object.fromEntries(js.map(j => [j.id, 0])); H.rodada = 0; H.usados = [];
+    H.jogadores = js; H.rkId = null; H.placar = Object.fromEntries(js.map(j => [j.id, 0])); H.rodada = 0; H.usados = [];
     novaRodada();
   }
   function novaRodada() {
@@ -124,6 +124,7 @@
   function telaFinal() {
     const rank = Object.entries(estado.placar).map(([id, v]) => [nomeDe(id), v]).sort((a, b) => b[1] - a[1]);
     const camp = rank.filter(x => x[1] === rank[0][1]).map(x => x[0]);
+    if (souHost) window.Ranking && Ranking.registrar(H, 'ordene-sala', estado.jogadores.map(j => j.nome), camp);
     render(`<div class="center" style="margin-top:10px"><div class="trophy">🏆</div><p class="muted" style="margin:6px 0 0">${camp.length > 1 ? 'Empate!' : 'Campeão'}</p><h1 class="logo" style="font-size:2.3rem">${camp.map(esc).join(' & ')}</h1></div>
       ${C.htmlPodio(rank)}<div class="card"><span class="label">Classificação</span>${placar()}</div>
       ${souHost ? '<button class="btn" id="denovo">Nova partida na mesma sala</button>' : ''}<a class="btn ghost" href="index.html">Voltar aos jogos</a>`);

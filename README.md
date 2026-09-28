@@ -32,7 +32,9 @@ Site de jogos para jogar com os amigos, feito para rodar no GitHub Pages (sem se
 - **Monta o Time** (`montatime.html`): critério fixo na partida (mais alto, mais baixo, mais gols/jogos pela seleção, mais gols em clubes, mais clubes, mais velho). A cada rodada sai um tema (122: seleções, clubes, países, gerações) e cada um escolhe um jogador para uma vaga do seu time (GOL, 2 DEF, 2 MEI, 2 ATA). Fora do tema não pontua. Um ou vários celulares (`montatime-sala.html`).
 - **De Quem É a Carreira?** (`carreira.html`): os clubes aparecem um a um; acertar no clube k de N vale N−k+1. Um ou vários celulares (`carreira-sala.html`).
 - **Ordene a Carreira** (`ordene.html`): jogador + clubes embaralhados; +1 por posição certa, +3 se acertar tudo. Um ou vários celulares (`ordene-sala.html`).
-- Dados de futebol em `craques.js` (2.440 jogadores, Wikidata, set/2026) e regras em `futebol.js`. Títulos e assistências não estão nos dados.
+- Dados de futebol em `craques.js` (Wikidata + elencos de cada temporada do Transfermarkt dos clubes dos temas, set/2026) e regras em `futebol.js`. Títulos e assistências não estão nos dados.
+  - Monta o Time: escolher alguém fora do tema mostra o aviso e pede outro jogador (ninguém zera).
+- **Ranking** (`ranking.html`): cadastro de jogadores e % de vitórias, geral e por jogo. Cada partida terminada com 2+ jogadores é registrada sozinha (empate no 1º lugar = vitória para todos os empatados; no Impostor, vence o lado vencedor). Dados no Supabase, tabelas `rj_jogadores` e `rj_partidas` (SQL em `ranking.sql`).
 
 ## Estrutura
 Todos os arquivos ficam na raiz (sem pastas), para facilitar o upload pelo site do GitHub.

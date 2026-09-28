@@ -72,7 +72,7 @@
     const l = H.cfg.lista === 'sortear' ? (cabem.length ? cabem : LISTAS)[Math.floor(Math.random() * (cabem.length || LISTAS.length))] : LISTAS.find(x => x.id === H.cfg.lista);
     H.listaId = l.id; H.N = Math.min(H.cfg.tamanho, maxPos(l));
     prepararMatchers();
-    H.partida++; H.jogadores = js; H.rodada = 1; H.offset = (H.offset || 0);
+    H.partida++; H.jogadores = js; H.rkId = null; H.rodada = 1; H.offset = (H.offset || 0);
     H.placar = Object.fromEntries(js.map(j => [j.id, 0]));
     H.vivos = js.map(j => j.id); H.folgas = Object.fromEntries(js.map(j => [j.id, 0]));
     H.chutes = []; H.usados = []; H.log = []; H.msg = null; H.pendente = null; H.acabouLista = false;
@@ -322,6 +322,7 @@
       const rank = estado.jogadores.map(j => [j.nome, estado.placar[j.id] || 0]).sort((a, b) => estado.cfg.estilo === 'reverso' ? a[1] - b[1] : b[1] - a[1]);
       camp = rank.filter(r => r[1] === rank[0][1]).map(r => r[0]); sub = camp.length > 1 ? 'Empate! Campeões da vez' : 'Campeão da vez';
     }
+    if (souHost) window.Ranking && Ranking.registrar(H, 'top100-sala', estado.jogadores.map(j => j.nome), camp);
     const quem = {}; estado.chutes.forEach(c => { if (c.item) quem[c.item.pos + '|' + c.item.nome] = nomeDe(c.jogador); });
     const blefes = estado.chutes.filter(c => c.status === 'passou' && !c.item);
     render(`

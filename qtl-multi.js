@@ -68,7 +68,7 @@
     else { let pool = JOGOS.filter(x => !H.vistos.includes(x.id)); if (!pool.length) { pool = JOGOS; H.vistos = []; } j = pool[Math.floor(Math.random() * pool.length)]; }
     H.vistos.push(j.id);
     H.jogoId = j.id; H.extras = []; preparar();
-    H.partida++; H.jogadores = js;
+    H.partida++; H.jogadores = js; H.rkId = null;
     const ids = js.map(x => x.id), ini = (H.partida - 1) % ids.length;
     H.ordem = ids.slice(ini).concat(ids.slice(0, ini)); H.vez = 0;
     H.vivos = ids.slice(); H.folgas = Object.fromEntries(ids.map(i => [i, 0]));
@@ -285,6 +285,7 @@
 
   function telaFinal() {
     const vivos = estado.ordem.filter(id => estado.vivos.includes(id)).map(nomeDe);
+    if (souHost) window.Ranking && Ranking.registrar(H, 'qtl-sala', estado.jogadores.map(j => j.nome), vivos);
     const falados = new Set(estado.ditos.filter(d => d.atleta).map(d => d.atleta.nome));
     const blefes = estado.ditos.filter(d => d.status === 'passou' && !d.atleta);
     render(`

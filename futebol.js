@@ -84,13 +84,15 @@
   const contagemClubes = {};
   J.forEach(j => j.clubes.forEach(c => contagemClubes[c] = (contagemClubes[c] || 0) + 1));
   const PEQUENOS = new Set(['Juventus-SP', 'Santo André', 'Paulista', 'Ituano', 'Marília', 'Botafogo-SP', 'São Caetano', 'Portuguesa', 'Figueirense', 'Avaí', 'Criciúma', 'Paraná', 'Guarani', 'Ponte Preta', 'Santa Cruz', 'Juventude', 'Náutico', 'Queens Park Rangers', 'Stoke City', 'Sunderland', 'West Bromwich Albion', 'Real Zaragoza']);
-  const CLUBES_TOP = Object.entries(contagemClubes).filter(([c, n]) => n >= 28 && (D.clubes[c] || [])[1] !== 'Japão' && !PEQUENOS.has(F.nomeClube(c))).map(([c]) => +c);
+  // clubes dos temas: lista fixa (os elencos desses clubes foram baixados por completo no banco)
+  const CLUBES_TEMA = [631, 704, 1422, 1457, 1543, 1886, 2052, 2074, 2609, 2641, 2693, 2739, 2768, 2798, 4512, 5794, 7156, 8682, 8701, 8723, 8749, 8760, 8780, 9616, 9617, 10315, 10329, 10333, 11938, 12297, 15789, 15799, 17479, 18656, 18708, 18711, 18716, 18732, 18741, 18747, 19467, 19481, 19509, 19516, 19593, 19628, 29108, 29112, 32494, 35933, 38245, 38568, 41420, 50602, 51974, 51976, 75729, 80845, 80955, 80958, 80964, 80987, 81888, 101859, 101959, 102720, 104761, 128446, 131499, 132885, 134241, 172476, 172567, 172803, 172969, 180305, 188277, 198032, 219098, 221695, 270995, 274465, 338285, 478317, 483020, 495299, 506832, 541744, 816779, 1052219, 1130849, 5014111, 6601875, 170703, 188841, 482764, 73965, 16844931, 309480, 1128631, 19490, 19453, 185163, 702455, 8687, 499616, 1007597, 276533, 214978, 2622870];
+  const CLUBES_TOP = CLUBES_TEMA.filter(c => D.clubes[c] && (contagemClubes[c] || 0) >= 25 && !PEQUENOS.has(F.nomeClube(c)));
 
   F.TEMAS = [
-    ...SELECOES.map(s => ({ id: 'sel:' + s, grupo: 'Seleções', nome: s.replace('Seleção', 'Jogou pela Seleção'), test: j => j.sel === s })),
-    ...CLUBES_TOP.map(c => ({ id: 'clube:' + c, grupo: 'Clubes', nome: 'Passou pelo clube: ' + F.nomeClube(c), test: j => j.clubes.has(c) })),
-    ...PAISES.map(([p, d]) => ({ id: 'pais:' + p, grupo: 'Países', nome: 'Jogou em ' + d, test: j => j.paises.has(p) })),
-    ...[1960, 1970, 1980, 1990, 2000].map(d => ({ id: 'dec:' + d, grupo: 'Gerações', nome: `Nasceu nos anos ${String(d).slice(2)}`, test: j => j.ano >= d && j.ano < d + 10 }))
+    ...SELECOES.map(s => ({ id: 'sel:' + s, grupo: 'Seleções', nome: s.replace('Seleção', 'Jogou pela Seleção'), nao: 'nunca jogou pela ' + s, test: j => j.sel === s })),
+    ...CLUBES_TOP.map(c => ({ id: 'clube:' + c, grupo: 'Clubes', nome: 'Passou pelo clube: ' + F.nomeClube(c), nao: 'nunca jogou no ' + F.nomeClube(c), test: j => j.clubes.has(c) })),
+    ...PAISES.map(([p, d]) => ({ id: 'pais:' + p, grupo: 'Países', nome: 'Jogou em ' + d, nao: 'nunca jogou em ' + d, test: j => j.paises.has(p) })),
+    ...[1960, 1970, 1980, 1990, 2000].map(d => ({ id: 'dec:' + d, grupo: 'Gerações', nome: `Nasceu nos anos ${String(d).slice(2)}`, nao: `não nasceu nos anos ${String(d).slice(2)}`, test: j => j.ano >= d && j.ano < d + 10 }))
   ];
   F.GRUPOS_TEMA = ['Seleções', 'Clubes', 'Países', 'Gerações'];
 
@@ -100,6 +102,10 @@
   F.encaixa = (j, g) => g === 'G' ? j.pos.includes('G') : [...j.pos].some(p => ADJ[g].includes(p));
 
   F.temaValido = (t, crit) => ['G', 'D', 'M', 'A'].every(gp => J.filter(j => t.test(j) && j.pos.includes(gp) && crit.val(j) != null).length >= 3);
+
+  // escolha inválida (fora do tema ou sem dado): devolve a mensagem para pedir outro jogador
+  F.motivoInvalido = (j, tema, crit) => !tema.test(j) ? `${j.nome} ${tema.nao}. Escolha outro jogador.`
+    : crit.val(j) == null ? `Não temos o dado "${crit.curto}" de ${j.nome}. Escolha outro jogador.` : null;
 
   // pontuação de uma escolha
   F.pontuar = (j, tema, crit) => {

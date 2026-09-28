@@ -352,6 +352,7 @@
   // ---------- fim ----------
   function telaFinal(motivo) {
     const vivos = p.ordem.filter(j => p.vivos.has(j));
+    window.Ranking && Ranking.registrar(p, 'qtl', p.ordem, vivos);
     const falados = new Set(p.ditos.filter(d => d.atleta && d.status !== 'passou').map(d => d.atleta.nome));
     const passados = new Set(p.ditos.filter(d => d.status === 'passou').map(d => d.atleta ? d.atleta.nome : null).filter(Boolean));
     const blefes = p.ditos.filter(d => d.status === 'passou' && !d.atleta);

@@ -110,6 +110,8 @@
       const box = document.getElementById('slots'), btns = document.getElementById('slotBtns');
       if (!j) { box.classList.add('hidden'); atualizar(); return; }
       if (Object.values(time).some(s => s && s.id === j.id)) { toast('Esse jogador já está no seu time.'); escolhido = null; box.classList.add('hidden'); atualizar(); return; }
+      const inval = F.motivoInvalido(j, p.tema, p.crit);
+      if (inval) { escolhido = null; box.classList.remove('hidden'); btns.innerHTML = `<span class="erro-escolha">❌ ${esc(inval)}</span>`; atualizar(); return; }
       const ok = vazios.filter(s => F.encaixa(j, s.g)).filter((s, i, arr) => arr.findIndex(x => x.g === s.g) === i);
       box.classList.remove('hidden');
       btns.innerHTML = ok.length ? ok.map(s => `<button class="chip" data-slot="${s.k}">${F.POSN[s.g]}</button>`).join('')
@@ -151,6 +153,7 @@
   function telaFinal() {
     const rank = ranking(), top = rank[0][1];
     const camp = rank.filter(r => r[1] === top).map(r => r[0]);
+    window.Ranking && Ranking.registrar(p, 'montatime', cfg.jogadores, camp);
     render(`<div class="center" style="margin-top:10px"><div class="trophy">🏆</div><p class="muted" style="margin:6px 0 0">${esc(p.crit.nome)} · ${camp.length > 1 ? 'Empate!' : 'Campeão'}</p>
         <h1 class="logo" style="font-size:2.3rem">${camp.map(esc).join(' & ')}</h1></div>
       <div class="card"><span class="label">Classificação</span>${placar()}</div>

@@ -372,6 +372,7 @@
   }
 
   function telaFim(inocentesVenceram, motivo) {
+    window.Ranking && Ranking.registrar(p, 'impostor', cfg.jogadores, inocentesVenceram ? cfg.jogadores.filter(j => !p.impostores.has(j)) : [...p.impostores]);
     const q = p.palavra;
     render(`
       <div class="center" style="margin-top:10px">

@@ -90,7 +90,7 @@
     const ids = lista.map(j => j.id);
     H.ordem = ids.slice(ini).concat(ids.slice(0, ini));
     H.rodadaFala = 1; H.rodadasAlvo = H.cfg.rodadas; H.pegos = [];
-    H.votos = {}; H.viram = {}; H.apuracao = null; H.fim = null; H.votacaoId = 0;
+    H.votos = {}; H.viram = {}; H.apuracao = null; H.fim = null; H.votacaoId = 0; H.rkId = null;
     H.pistas = {}; H.nPistas = 0;
     H.cartas = {};
     const q = H.palavra;
@@ -146,6 +146,7 @@
     else H.impostores.forEach(i => H.placar[i] += 2);
     H.fim = { inocentes, motivo, palavra: q.p, parecida: q.s, dica: q.d, modo: H.cfg.modo, impostores: H.impostores.map(nomeId) };
     H.fase = 'fim';
+    window.Ranking && Ranking.registrar(H, 'impostor-sala', H.jogadores.map(j => j.nome), H.jogadores.filter(j => inocentes !== H.impostores.includes(j.id)).map(j => j.nome));
     publicar();
   }
   function voltarLobby() { H.fase = 'lobby'; H.cartas = null; sala.limparPrivados(); publicar(); }

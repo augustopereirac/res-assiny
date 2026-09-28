@@ -109,6 +109,7 @@
   const placar = () => `<table class="score">${ranking().map(([n, v]) => `<tr><td>${esc(n)}</td><td>${C.plural(v, 'pt')}</td></tr>`).join('')}</table>`;
   function telaFinal() {
     const rank = ranking(), top = rank[0][1], camp = rank.filter(r => r[1] === top).map(r => r[0]);
+    window.Ranking && Ranking.registrar(p, 'ordene', cfg.jogadores, camp);
     render(`<div class="center" style="margin-top:10px"><div class="trophy">🏆</div><p class="muted" style="margin:6px 0 0">${camp.length > 1 ? 'Empate!' : 'Campeão'}</p>
       <h1 class="logo" style="font-size:2.3rem">${camp.map(esc).join(' & ')}</h1></div>
       ${cfg.jogadores.length > 1 ? C.htmlPodio(rank) : ''}

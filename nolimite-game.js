@@ -86,6 +86,7 @@
           <input class="grow" type="text" id="novoNome" placeholder="Nome do jogador" maxlength="20" autocomplete="off">
           <button class="btn small" type="submit">Adicionar</button>
         </form>
+        <div id="cadChips">${window.Ranking ? Ranking.htmlChips(cfg.jogadores, 'data-cad') : ''}</div>
       </div>
 
       <div class="card">
@@ -113,12 +114,16 @@
     const input = document.getElementById('novoNome');
     document.getElementById('addForm').onsubmit = e => {
       e.preventDefault();
-      const nome = input.value.trim();
+      let nome = input.value.trim();
       if (!nome) return;
+      if (window.Ranking) { nome = Ranking.canonico(nome); Ranking.cadastrar(nome); }
       if (cfg.jogadores.some(j => j.toLowerCase() === nome.toLowerCase())) { toast('Esse nome já está na lista.'); return; }
       cfg.jogadores.push(nome); salvarCfg(); telaSetup();
       document.getElementById('novoNome').focus();
     };
+    const ligarChips = () => app.querySelectorAll('[data-cad]').forEach(b => b.onclick = () => { const n = b.dataset.cad; if (!cfg.jogadores.some(j => j.toLowerCase() === n.toLowerCase())) { cfg.jogadores.push(n); salvarCfg(); telaSetup(); } });
+    ligarChips();
+    if (window.Ranking) Ranking.atualizar().then(() => { const box = document.getElementById('cadChips'); if (box) { box.innerHTML = Ranking.htmlChips(cfg.jogadores, 'data-cad'); ligarChips(); } });
     app.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { cfg.jogadores.splice(+b.dataset.del, 1); salvarCfg(); telaSetup(); });
     app.querySelectorAll('[data-up]').forEach(b => b.onclick = () => { const i = +b.dataset.up; [cfg.jogadores[i - 1], cfg.jogadores[i]] = [cfg.jogadores[i], cfg.jogadores[i - 1]]; salvarCfg(); telaSetup(); });
     app.querySelectorAll('[data-down]').forEach(b => b.onclick = () => { const i = +b.dataset.down; [cfg.jogadores[i + 1], cfg.jogadores[i]] = [cfg.jogadores[i], cfg.jogadores[i + 1]]; salvarCfg(); telaSetup(); });
@@ -322,6 +327,7 @@
     const rank = ranking();
     const topo = rank[0][1];
     const campeoes = rank.filter(r => r[1] === topo).map(r => r[0]);
+    window.Ranking && Ranking.registrar(jogo, 'nolimite', rank.map(r => r[0]), campeoes);
     const pod = rank.slice(0, 3);
     const cravadas = {};
     jogo.historico.forEach(h => h.resultados.forEach(r => { if (r.status === 'exact') cravadas[r.jogador] = (cravadas[r.jogador] || 0) + 1; }));

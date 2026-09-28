@@ -71,7 +71,7 @@
   function iniciar() {
     const lista = presentes.map(p => ({ id: p.id, nome: p.nome }));
     if (lista.length < 2) { toast('Precisa de pelo menos 2 pessoas na sala.'); return; }
-    H.jogadores = lista;
+    H.jogadores = lista; H.rkId = null;
     H.placar = Object.fromEntries(lista.map(j => [j.id, 0]));
     H.rodada = 0; H.historico = [];
     novaRodada();
@@ -237,6 +237,7 @@
     const rank = estado.jogadores.map(j => [j.nome, estado.placar[j.id] || 0]).sort((a, b) => b[1] - a[1]);
     const top = rank[0][1];
     const camp = rank.filter(r => r[1] === top).map(r => r[0]);
+    if (souHost) window.Ranking && Ranking.registrar(H, 'nolimite-sala', rank.map(r => r[0]), camp);
     render(`
       <div class="center" style="margin-top:10px"><div class="trophy">🏆</div>
         <p class="muted" style="margin:6px 0 0">${camp.length > 1 ? 'Empate! Campeões da vez' : 'Campeão da vez'}</p>

@@ -19,7 +19,7 @@
   // ---------- texto ----------
   C.norm = s => String(s || '')
     .replace(/♀/g, ' femea').replace(/♂/g, ' macho').replace(/['’`´]/g, '')
-    .replace(/ß/g, 'ss').replace(/[øØ]/g, 'o').replace(/[łŁ]/g, 'l').replace(/[đĐ]/g, 'd').replace(/æ/g, 'ae')
+    .replace(/ß/g, 'ss').replace(/[øØ]/g, 'o').replace(/[łŁ]/g, 'l').replace(/[đĐ]/g, 'd').replace(/æ/g, 'ae').replace(/ı/g, 'i').replace(/İ/g, 'i').replace(/œ/g, 'oe').replace(/þ/g, 'th')
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
@@ -121,6 +121,7 @@
         <input class="grow" type="text" id="novoNome" placeholder="Nome do jogador" maxlength="20" autocomplete="off">
         <button class="btn small" type="submit">Adicionar</button>
       </form>
+      <div id="cadChips">${global.Ranking ? global.Ranking.htmlChips(jogadores, 'data-cad') : ''}</div>
     </div>`;
 
   C.ligarEditorJogadores = (root, jogadores, aoMudar) => {
@@ -128,11 +129,15 @@
     root.querySelector('#addForm').onsubmit = e => {
       e.preventDefault();
       const inp = root.querySelector('#novoNome');
-      const nome = inp.value.trim();
+      let nome = inp.value.trim();
       if (!nome) return;
+      if (global.Ranking) { nome = global.Ranking.canonico(nome); global.Ranking.cadastrar(nome); }
       if (jogadores.some(j => j.toLowerCase() === nome.toLowerCase())) { C.toast('Esse nome já está na lista.'); return; }
       jogadores.push(nome); salvar(true);
     };
+    const ligarChips = () => root.querySelectorAll('[data-cad]').forEach(b => b.onclick = () => { const n = b.dataset.cad; if (!jogadores.some(j => j.toLowerCase() === n.toLowerCase())) { jogadores.push(n); salvar(); } });
+    ligarChips();
+    if (global.Ranking) global.Ranking.atualizar().then(() => { const box = root.querySelector('#cadChips'); if (box) { box.innerHTML = global.Ranking.htmlChips(jogadores, 'data-cad'); ligarChips(); } });
     root.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { jogadores.splice(+b.dataset.del, 1); salvar(); });
     root.querySelectorAll('[data-up]').forEach(b => b.onclick = () => { const i = +b.dataset.up; [jogadores[i - 1], jogadores[i]] = [jogadores[i], jogadores[i - 1]]; salvar(); });
     root.querySelectorAll('[data-down]').forEach(b => b.onclick = () => { const i = +b.dataset.down; [jogadores[i + 1], jogadores[i]] = [jogadores[i], jogadores[i + 1]]; salvar(); });
