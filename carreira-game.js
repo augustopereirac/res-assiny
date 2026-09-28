@@ -74,11 +74,10 @@
 
   function telaChute(nome) {
     // o que os outros fizeram NESTE clube fica escondido até o clube fechar
-    const antes = p.chutes.filter(c => c.passo < p.passo && !c.ok && !c.passou);
     let escolhido = null;
     render(`${cab()}
       <div class="card"><span class="label">A carreira</span>${htmlCarreira(p.passo)}</div>
-      ${antes.length ? `<p class="muted small center">Chutes errados nos clubes anteriores: ${antes.map(c => esc(c.nome)).join(', ')}</p>` : ''}
+      ${F.htmlHistChutes(p.chutes.filter(c => c.passo < p.passo).map(c => c.ok ? { ...c, nome: null } : c), n => n)}
       <div class="card"><p style="margin:0 0 8px"><strong style="font-size:1.25rem">${esc(nome)}</strong>, de quem é essa carreira? <span class="muted small">(vale ${N() - p.passo + 1} pts)</span></p>
         ${F.htmlBusca('busca')}
         <button class="btn" id="chutar" disabled>Chutar</button>
@@ -115,6 +114,7 @@
       <div class="card center"><div class="muted small">Era</div><div class="question" style="font-size:1.8rem">${esc(j.nome)}</div>
         <div class="muted small">${esc(F.descPos(j))}${j.ano ? ' · nascido em ' + j.ano : ''}${j.sel ? ' · ' + esc(j.sel) : ''}</div></div>
       <div class="card"><span class="label">Carreira completa</span>${htmlCarreira(N(), true)}</div>
+      ${F.htmlHistChutes(p.chutes, n => n, 'Chutes da rodada')}
       <div class="card"><span class="label">Quem acertou</span>${p.ordem.map(n => `<p class="small" style="margin:4px 0">${esc(n)}: ${p.acertou[n] ? `✅ no ${p.acertou[n]}º clube (+${N() - p.acertou[n] + 1})` : '❌ não acertou'}</p>`).join('')}</div>
       <div class="card"><span class="label">Placar</span>${placar()}</div>
       <button class="btn" id="prox">${p.rodada >= cfg.rodadas ? '🏆 Ver campeão' : 'Próximo jogador'}</button>`);

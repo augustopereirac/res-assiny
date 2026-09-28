@@ -130,6 +130,16 @@
   F.total = slots => Object.values(slots).reduce((s, x) => s + (x ? x.v : 0), 0);
 
   // ---------- Carreira ----------
+  // histórico de chutes agrupado por clube revelado. chutes: [{quem, passo, ok, passou, nome, meu}]
+  F.htmlHistChutes = (chutes, nomeQuem, titulo) => {
+    const porPasso = {};
+    chutes.forEach(c => (porPasso[c.passo] = porPasso[c.passo] || []).push(c));
+    const passos = Object.keys(porPasso).map(Number).sort((a, b) => a - b);
+    if (!passos.length) return '';
+    return `<div class="card"><span class="label">${titulo || 'Jogadores já chutados'}</span>${passos.map(k => `<p class="small" style="margin:6px 0"><span class="muted">Clube ${k}:</span> ${porPasso[k].map(c =>
+      `${C.esc(nomeQuem(c.quem))} ${c.ok ? '✅' + (c.nome ? ' ' + C.esc(c.nome) : ' acertou') : c.passou ? '<span class="muted">passou</span>' : '❌ <strong>' + C.esc(c.nome) + '</strong>'}${c.meu ? ' <span class="muted">(só você vê)</span>' : ''}`).join(' · ')}</p>`).join('')}</div>`;
+  };
+
   F.anos = c => c.ini ? (c.fim && c.fim !== c.ini ? `${c.ini}–${c.fim}` : c.fim === c.ini ? `${c.ini}` : `${c.ini}–`) : '';
   F.POOLS = {
     famosos: { nome: 'Famosos do mundo todo', test: j => j.fama >= 60 },

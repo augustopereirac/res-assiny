@@ -5,6 +5,7 @@
   const app = document.getElementById('app');
   const JOGO = 'carreira';
   const render = html => { app.innerHTML = html; };
+  let meusChutes = [];
   let meuChute = null; // resultado do meu próprio chute (só eu vejo até o clube fechar)
   let sala = null, souHost = false, estado = null, presentes = [], H = null;
 
@@ -16,7 +17,7 @@
     sala = Sala.conectar({
       jogo: JOGO, codigo, nome, host: souHost,
       onEstado: e => { estado = e; desenhar(); },
-      onPrivado: d => { if (d && d.aviso) toast(d.aviso); if (d && d.chute) { meuChute = d.chute; desenhar(); } },
+      onPrivado: d => { if (d && d.aviso) toast(d.aviso); if (d && d.chute) { meuChute = d.chute; if (!meusChutes.some(x => x.rodada === d.chute.rodada && x.passo === d.chute.passo)) meusChutes.push(d.chute); desenhar(); } },
       onAcao: souHost ? acaoHost : null,
       onPresenca: l => { presentes = l; if (souHost) publicar(); else desenhar(); },
       onStatus: st => { if (st === 'SUBSCRIBED') { if (souHost) publicar(); else if (!estado) desenhar(); } }
@@ -114,10 +115,12 @@
     const errei = !acertei && respondi && meu && meu.passo === estado.passo && !meu.ok ? meu.nome : null;
     const doPasso = estado.chutes;
     if (document.getElementById('busca') && eu && !acertei && !respondi && document.getElementById('passoAtual')?.dataset.p == estado.rodada + '-' + estado.passo) {
-      const st = document.getElementById('statusBox'); if (st) st.innerHTML = statusHtml(doPasso); return;
+      const st = document.getElementById('statusBox'); if (st) st.innerHTML = statusHtml(doPasso);
+      const hb = document.getElementById('histBox'); if (hb) hb.innerHTML = hist(); return;
     }
     render(`${topo(`Rodada ${estado.rodada}/${estado.cfg.rodadas} · clube ${estado.passo}/${estado.N}`)}<span id="passoAtual" data-p="${estado.rodada}-${estado.passo}"></span>
       <div class="card"><span class="label">A carreira</span>${lista(false)}</div>
+      <div id="histBox">${hist()}</div>
       ${!eu ? '<p class="muted center">Você está assistindo.</p>' : acertei ? `<div class="card center">✅ Você acertou no ${acertei}º clube! Aguardando os outros…</div>` : respondi ? `<div class="card center muted">${errei ? `❌ Não é ${esc(errei)}. ` : ''}Aguardando os outros…</div>` : `
         <div class="card"><p style="margin:0 0 8px"><strong>De quem é essa carreira?</strong> <span class="muted small">(vale ${estado.N - estado.passo + 1} pts)</span></p>
           ${F.htmlBusca('busca')}<button class="btn" id="chutar" disabled>Chutar</button><button class="btn ghost" id="passar">Passar (esperar mais um clube)</button></div>`}
@@ -135,13 +138,19 @@
       const a = estado.acertou[j.id], r = estado.responderam[j.id];
       return `<span class="chip ${a || r ? 'on' : ''}">${a ? '✅' : r ? '🕐' : '⏳'} ${esc(j.nome)}</span>`;
     }).join('')}</div>
-    ${doPasso.filter(c => !c.ok && !c.passou).length ? `<p class="muted small center">Chutes errados nos clubes anteriores: ${doPasso.filter(c => !c.ok && !c.passou).map(c => esc(c.nome)).join(', ')}</p>` : ''}`;
+`;
+  // histórico: clubes já fechados (de todos) + meu chute no clube aberto (só eu vejo)
+  const hist = () => {
+    const meus = meusChutes.filter(c => c.rodada === estado.rodada && c.passo === estado.passo && estado.fase === 'jogo').map(c => ({ quem: sala.id, passo: c.passo, ok: c.ok, nome: c.nome, meu: true }));
+    return F.htmlHistChutes([...estado.chutes, ...meus], nomeDe);
+  };
 
   function telaFimRodada() {
     const r = estado.revelado;
     render(`${topo(`Rodada ${estado.rodada}/${estado.cfg.rodadas}`)}
       <div class="card center"><div class="muted small">Era</div><div class="question" style="font-size:1.8rem">${esc(r.nome)}</div><div class="muted small">${esc(r.pos)}${r.ano ? ' · nascido em ' + r.ano : ''}${r.sel ? ' · ' + esc(r.sel) : ''}</div></div>
       <div class="card"><span class="label">Carreira completa</span>${lista(true)}</div>
+      ${F.htmlHistChutes(estado.chutes, nomeDe, 'Chutes da rodada')}
       <div class="card"><span class="label">Quem acertou</span>${estado.jogadores.map(j => `<p class="small" style="margin:4px 0">${esc(j.nome)}: ${estado.acertou[j.id] ? `✅ no ${estado.acertou[j.id]}º clube (+${estado.N - estado.acertou[j.id] + 1})` : '❌'}</p>`).join('')}</div>
       <div class="card"><span class="label">Placar</span>${placar()}</div>
       ${souHost ? `<button class="btn" id="prox">${estado.rodada >= estado.cfg.rodadas ? '🏆 Ver campeão' : 'Próximo jogador'}</button>` : '<p class="muted center">Aguardando o anfitrião…</p>'}`);
