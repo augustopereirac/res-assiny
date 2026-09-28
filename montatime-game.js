@@ -11,9 +11,9 @@
   const cfg = {
     jogadores: C.carregarJogadores(),
     crit: store.get('mt:crit', 'alto'),
-    grupos: store.get('mt:grupos', F.GRUPOS_TEMA.slice())
+    grupos: store.get('mt:grupos2', F.GRUPOS_PADRAO.slice())
   };
-  const salvar = () => { store.set('mt:crit', cfg.crit); store.set('mt:grupos', cfg.grupos); };
+  const salvar = () => { store.set('mt:crit', cfg.crit); store.set('mt:grupos2', cfg.grupos); };
   let p = null;
 
   function telaSetup() {
@@ -30,7 +30,7 @@
       </div>
       <div class="card"><span class="label">Tipos de tema das rodadas</span>
         <div class="chips">${F.GRUPOS_TEMA.map(gp => `<button class="chip ${cfg.grupos.includes(gp) ? 'on' : ''}" data-gp="${gp}">${gp}</button>`).join('')}</div>
-        <p class="muted small" style="margin:10px 0 0">São 7 rodadas, uma para cada posição: GOL, 2 defensores, 2 meias e 2 atacantes. Dados: Wikidata (set/2026).</p>
+        <p class="muted small" style="margin:10px 0 0">“Mais clubes” = clubes menos conhecidos (Spartak, Celtic, Udinese…), começa desligado. Se cair um tema que ninguém conhece, dá para trocar na hora. São 7 rodadas, uma para cada posição: GOL, 2 defensores, 2 meias e 2 atacantes. Dados: Wikidata (set/2026).</p>
       </div>
       <button class="btn" id="comecar" ${pode ? '' : 'disabled'}>Começar</button>
     `);
@@ -55,7 +55,8 @@
 
   function sortearTema() {
     const pool = F.TEMAS.filter(t => cfg.grupos.includes(t.grupo) && !p.usados.includes(t.id) && F.temaValido(t, p.crit));
-    const base = pool.length ? pool : F.TEMAS.filter(t => F.temaValido(t, p.crit));
+    const pool2 = F.TEMAS.filter(t => cfg.grupos.includes(t.grupo) && t.id !== (p.tema && p.tema.id) && F.temaValido(t, p.crit));
+    const base = pool.length ? pool : pool2.length ? pool2 : F.TEMAS.filter(t => F.temaValido(t, p.crit));
     const t = base[Math.floor(Math.random() * base.length)];
     p.usados.push(t.id);
     return t;
@@ -84,11 +85,22 @@
     document.getElementById('trocar').onclick = () => { p.tema = sortearTema(); telaTema(); };
   }
 
+  // trocar o tema no meio da rodada: quem já escolheu escolhe de novo
+  const botaoTrocar = () => `<button class="btn ghost" id="trocarTema" style="margin-top:12px">🔄 Ninguém conhece? Trocar o tema</button>`;
+  function ligarTrocar() {
+    const b = document.getElementById('trocarTema'); if (!b) return;
+    b.onclick = () => {
+      if (Object.keys(p.escolhas).length && !confirm('Trocar o tema? Quem já escolheu nesta rodada vai escolher de novo.')) return;
+      p.tema = sortearTema(); p.escolhas = {}; p.vez = 0; telaTema();
+    };
+  }
+
   function telaPasse() {
     const nome = p.ordem[p.vez];
     render(`${cab()}<div class="pass"><div class="emoji">📱</div><p class="muted">Passe o celular para</p><div class="big-name">${esc(nome)}</div>
-      <button class="btn" id="sou">Sou ${esc(nome)}, escolher</button></div>`);
-    ligarSair();
+      <button class="btn" id="sou">Sou ${esc(nome)}, escolher</button></div>
+      ${botaoTrocar()}`);
+    ligarSair(); ligarTrocar();
     document.getElementById('sou').onclick = telaEscolha;
   }
 
@@ -101,8 +113,9 @@
       ${F.htmlBusca('busca')}
       <div id="slots" class="card hidden"><span class="label">Em qual posição?</span><div class="chips" id="slotBtns"></div></div>
       <button class="btn" id="confirmar" disabled>Confirmar</button>
-      ${F.htmlCampo(time, p.crit, 'Seu time')}`);
-    ligarSair();
+      ${F.htmlCampo(time, p.crit, 'Seu time')}
+      ${botaoTrocar()}`);
+    ligarSair(); ligarTrocar();
     const confirmar = document.getElementById('confirmar');
     const atualizar = () => { confirmar.disabled = !(escolhido && slot); };
     F.ligarBusca('busca', j => {
