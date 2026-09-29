@@ -123,7 +123,9 @@
       const box = document.getElementById('slots'), btns = document.getElementById('slotBtns');
       if (!j) { box.classList.add('hidden'); atualizar(); return; }
       if (Object.values(time).some(s => s && s.id === j.id)) { toast('Esse jogador já está no seu time.'); escolhido = null; box.classList.add('hidden'); atualizar(); return; }
-      const inval = F.motivoInvalido(j, p.tema, p.crit);
+      // cada jogador de futebol só pode estar em um time da partida (quem confirmou primeiro fica com ele)
+      const dono = cfg.jogadores.find(n => n !== nome && (Object.values(p.times[n]).some(s => s && s.id === j.id) || (p.escolhas[n] && p.escolhas[n].id === j.id)));
+      const inval = dono ? `${j.nome} já está no time de ${dono}. Escolha outro jogador.` : F.motivoInvalido(j, p.tema, p.crit);
       if (inval) { escolhido = null; box.classList.remove('hidden'); btns.innerHTML = `<span class="erro-escolha">❌ ${esc(inval)}</span>`; atualizar(); return; }
       const ok = vazios.filter(s => F.encaixa(j, s.g)).filter((s, i, arr) => arr.findIndex(x => x.g === s.g) === i);
       box.classList.remove('hidden');

@@ -32,7 +32,7 @@
   function publico() {
     return {
       fase: H.fase, cfg: H.cfg, critId: H.critId, rodada: H.rodada, total: 7, jogadores: H.jogadores || [],
-      tema: H.tema ? { nome: H.tema.nome } : null, temaId: H.temaId, trocas: H.trocas || 0, aviso: H.aviso || '', times: H.times || {}, escolheu: Object.fromEntries(Object.keys(H.escolhas || {}).map(k => [k, true])),
+      tema: H.tema ? { nome: H.tema.nome } : null, temaId: H.temaId, ocupados: ocupados(), trocas: H.trocas || 0, aviso: H.aviso || '', times: H.times || {}, escolheu: Object.fromEntries(Object.keys(H.escolhas || {}).map(k => [k, true])),
       revelacao: H.fase === 'revelado' || H.fase === 'final' ? H.revelacao : null, historico: H.fase === 'final' ? H.historico : null
     };
   }
@@ -53,6 +53,13 @@
     novaRodada();
   }
   function novaRodada() { H.rodada++; H.escolhas = {}; H.revelacao = null; H.tema = sortearTema(); H.temaId = H.tema.id; H.fase = 'escolha'; publicar(); }
+  // jogadores já usados na partida: nos times ou confirmados nesta rodada (id -> dono)
+  function ocupados() {
+    const o = {};
+    Object.entries(H.times || {}).forEach(([pid, t]) => Object.values(t).forEach(s => { if (s) o[s.id] = pid; }));
+    Object.entries(H.escolhas || {}).forEach(([pid, e]) => { o[e.id] = pid; });
+    return o;
+  }
   function temaAtual() { if (!H.tema || !H.tema.test) H.tema = F.TEMAS.find(t => t.id === H.temaId); return H.tema; }
   function acaoHost(msg) {
     if (msg.tipo === 'trocarTema' && H.times[msg.de]) return trocarTema(msg.de);
@@ -60,6 +67,8 @@
       const j = F.porId[msg.dados.id], slot = msg.dados.slot, time = H.times[msg.de];
       const s = F.SLOTS.find(x => x.k === slot);
       if (!j || !s || time[slot] || !F.encaixa(j, s.g) || Object.values(time).some(x => x && x.id === j.id) || F.motivoInvalido(j, temaAtual(), crit())) { sala.privado(msg.de, { aviso: 'Escolha inválida, tente de novo.', t: Date.now() }); return; }
+      const dono = ocupados()[j.id];
+      if (dono && dono !== msg.de) { sala.privado(msg.de, { aviso: `${j.nome} já está no time de ${nomeId(dono)}. Escolha outro jogador.`, t: Date.now() }); return; }
       H.escolhas[msg.de] = { id: j.id, slot };
       publicar();
     }
@@ -139,7 +148,8 @@
       const box = document.getElementById('slots'), btns = document.getElementById('slotBtns');
       if (!j) { box.classList.add('hidden'); bt.disabled = true; return; }
       if (Object.values(time).some(s => s && s.id === j.id)) { toast('Esse jogador já está no seu time.'); escolhido = null; box.classList.add('hidden'); bt.disabled = true; return; }
-      const tema = F.TEMAS.find(t => t.id === estado.temaId), inval = tema && F.motivoInvalido(j, tema, C_());
+      const donoId = (estado.ocupados || {})[j.id];
+      const tema = F.TEMAS.find(t => t.id === estado.temaId), inval = donoId && donoId !== sala.id ? `${j.nome} já está no time de ${nomeDe(donoId)}. Escolha outro jogador.` : tema && F.motivoInvalido(j, tema, C_());
       if (inval) { escolhido = null; box.classList.remove('hidden'); btns.innerHTML = `<span class="erro-escolha">❌ ${esc(inval)}</span>`; bt.disabled = true; return; }
       const ok = vazios.filter(s => F.encaixa(j, s.g)).filter((s, i, a) => a.findIndex(x => x.g === s.g) === i);
       box.classList.remove('hidden');
