@@ -159,6 +159,8 @@
     document.getElementById('prox').onclick = () => p.rodada >= p.total ? telaFinal() : novaRodada();
   }
 
+const tbTime = (slots, maior) => Object.values(slots || {}).filter(Boolean).map(x => maior ? x.v : -x.v).sort((a, b) => b - a);
+  const ROT_MT = ['ter o melhor jogador do time', 'o 2º melhor jogador', 'o 3º melhor jogador', 'o 4º melhor jogador', 'o 5º melhor jogador', 'o 6º melhor jogador', 'o 7º melhor jogador'];
   function ranking() {
     const r = cfg.jogadores.map(n => [n, F.total(p.times[n])]);
     return r.sort((a, b) => p.crit.maior ? b[1] - a[1] : a[1] - b[1]);
@@ -166,13 +168,14 @@
   const placar = () => `<table class="score">${ranking().map(([n, v]) => `<tr><td>${esc(n)}</td><td>${esc(p.crit.fmt(v))}</td></tr>`).join('')}</table>`;
 
   function telaFinal() {
-    const rank = ranking(), top = rank[0][1];
-    const camp = rank.filter(r => r[1] === top).map(r => r[0]);
+    const cl = C.classificar(cfg.jogadores.map(n => ({ nome: n, pts: F.total(p.times[n]), tb: tbTime(p.times[n], p.crit.maior) })), ROT_MT, !p.crit.maior);
+    const camp = cl.camp;
     window.Ranking && Ranking.registrar(p, 'montatime', cfg.jogadores, camp);
     render(`<div class="center" style="margin-top:10px"><div class="trophy">🏆</div><p class="muted" style="margin:6px 0 0">${esc(p.crit.nome)} · ${camp.length > 1 ? 'Empate!' : 'Campeão'}</p>
         <h1 class="logo" style="font-size:2.3rem">${camp.map(esc).join(' & ')}</h1></div>
-      <div class="card"><span class="label">Classificação</span>${placar()}</div>
-      ${rank.map(([n, v]) => `<div style="margin-bottom:14px">${F.htmlCampo(p.times[n], p.crit, `${esc(n)} · ${esc(p.crit.fmt(v))}`)}</div>`).join('')}
+      ${C.htmlDesempate(cl.motivo)}
+      <div class="card"><span class="label">Classificação</span><table class="score">${cl.rank.map(([n, v]) => `<tr><td>${esc(n)}</td><td>${esc(p.crit.fmt(v))}</td></tr>`).join('')}</table></div>
+      ${cl.rank.map(([n, v]) => `<div style="margin-bottom:14px">${F.htmlCampo(p.times[n], p.crit, `${esc(n)} · ${esc(p.crit.fmt(v))}`)}</div>`).join('')}
       <div class="card"><span class="label">Temas da partida</span>${p.historico.map((h, i) => `<p class="small" style="margin:6px 0"><strong>${i + 1}. ${esc(h.tema)}</strong><br>${h.linhas.map(l => `${esc(l.nome)}: ${esc(l.jogador)} ${l.ok ? '✅' : '❌'}`).join(' · ')}</p>`).join('')}</div>
       <button class="btn" id="denovo">Jogar de novo</button>
       <button class="btn secondary" id="config">Mudar jogadores / critério</button>

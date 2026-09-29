@@ -40,7 +40,7 @@
     return j;
   }
 
-  function iniciar() { p = { rodada: 0, usados: [], placar: Object.fromEntries(cfg.jogadores.map(j => [j, 0])) }; novaRodada(); }
+  function iniciar() { p = { rodada: 0, usados: [], placar: Object.fromEntries(cfg.jogadores.map(j => [j, 0])), tb: Object.fromEntries(cfg.jogadores.map(j => [j, [0, 0, 0]])) }; novaRodada(); }
   function novaRodada(trocar) {
     if (!trocar) p.rodada++;
     p.alvo = sortear(); p.respostas = {}; p.vez = 0;
@@ -101,6 +101,10 @@
   function revelar() {
     const res = cfg.jogadores.map(n => ({ n, ...pontos(p.respostas[n]) }));
     res.forEach(r => p.placar[r.n] += r.pts);
+    if (p.revelada !== p.rodada) { // desempate: ordens completas, rodadas vencidas, posições certas
+      p.revelada = p.rodada; const mx = Math.max(...res.map(r => r.pts));
+      res.forEach(r => { const t = p.tb[r.n] = p.tb[r.n] || [0, 0, 0]; if (r.acertos === p.certo.length) t[0]++; if (r.pts === mx && mx > 0) t[1]++; t[2] += r.acertos; });
+    }
     render(`${cab()}
       <div class="card"><span class="label">Ordem certa · ${esc(p.alvo.nome)}</span>
         <ol class="car-list">${p.alvo.car.map((c, i) => `<li><span class="n">${i + 1}</span><strong>${esc(c.nome)}</strong><span class="anos">${esc(F.anos(c))}</span></li>`).join('')}</ol></div>
@@ -115,12 +119,14 @@
   const ranking = () => Object.entries(p.placar).sort((a, b) => b[1] - a[1]);
   const placar = () => `<table class="score">${ranking().map(([n, v]) => `<tr><td>${esc(n)}</td><td>${C.plural(v, 'pt')}</td></tr>`).join('')}</table>`;
   function telaFinal() {
-    const rank = ranking(), top = rank[0][1], camp = rank.filter(r => r[1] === top).map(r => r[0]);
+    const cl = C.classificar(cfg.jogadores.map(n => ({ nome: n, pts: p.placar[n], tb: (p.tb || {})[n] || [] })), ['acertar mais ordens completas', 'vencer mais rodadas', 'acertar mais posições']);
+    const rank = cl.rank, camp = cl.camp;
     window.Ranking && Ranking.registrar(p, 'ordene', cfg.jogadores, camp);
     render(`<div class="center" style="margin-top:10px"><div class="trophy">🏆</div><p class="muted" style="margin:6px 0 0">${camp.length > 1 ? 'Empate!' : 'Campeão'}</p>
       <h1 class="logo" style="font-size:2.3rem">${camp.map(esc).join(' & ')}</h1></div>
+      ${C.htmlDesempate(cl.motivo)}
       ${cfg.jogadores.length > 1 ? C.htmlPodio(rank) : ''}
-      <div class="card"><span class="label">Classificação</span>${placar()}</div>
+      <div class="card"><span class="label">Classificação</span><table class="score">${rank.map(([n, v]) => `<tr><td>${esc(n)}</td><td>${C.plural(v, 'pt')}</td></tr>`).join('')}</table></div>
       <button class="btn" id="denovo">Jogar de novo</button>
       <button class="btn secondary" id="config">Mudar jogadores / opções</button>
       <a class="btn ghost" href="index.html">Voltar aos jogos</a>`);

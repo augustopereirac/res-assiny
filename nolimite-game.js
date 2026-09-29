@@ -1,6 +1,7 @@
 // No Limite — modo um celular (passa o celular de mão em mão)
 (function () {
   const app = document.getElementById('app');
+  const C = window.Comum;
   const PERGUNTAS = window.PERGUNTAS || [];
   const { pontuarRodada } = window.NoLimiteRegras;
   const TEMAS = [...new Set(PERGUNTAS.map(q => q.c))];
@@ -325,10 +326,11 @@
       </tr>`).join('')}</table>`;
   }
 
+const tbNL = (hist, campo) => { const t = {}; (hist || []).forEach(h => (h[campo] || []).forEach(r => { const x = t[r.jogador] = t[r.jogador] || [0, 0, 0]; if (r.status === 'exact') x[0]++; if (r.status === 'close') x[1]++; if (r.status === 'bust') x[2]--; })); return t; };
   function telaFinal() {
-    const rank = ranking();
-    const topo = rank[0][1];
-    const campeoes = rank.filter(r => r[1] === topo).map(r => r[0]);
+    const tbs = tbNL(jogo.historico, 'resultados');
+    const cl = C.classificar(ranking().map(([n, v]) => ({ nome: n, pts: v, tb: tbs[n] || [] })), ['cravar mais vezes', 'ficar mais vezes com o palpite mais perto', 'estourar menos vezes']);
+    const rank = cl.rank, campeoes = cl.camp;
     window.Ranking && Ranking.registrar(jogo, 'nolimite', rank.map(r => r[0]), campeoes);
     const pod = rank.slice(0, 3);
     const cravadas = {};
@@ -341,6 +343,7 @@
         <p class="muted" style="margin:6px 0 0">${campeoes.length > 1 ? 'Empate! Campeões da vez' : 'Campeão da vez'}</p>
         <h1 class="logo" style="font-size:2.4rem">${campeoes.map(esc).join(' & ')}</h1>
       </div>
+      ${C.htmlDesempate(cl.motivo)}
 
       <div class="podium">
         ${[1, 0, 2].filter(i => pod[i]).map(i => `

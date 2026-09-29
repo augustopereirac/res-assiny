@@ -249,15 +249,17 @@
     if (souHost) document.getElementById('prox').onclick = proxima;
   }
 
+const tbNL = (hist, campo) => { const t = {}; (hist || []).forEach(h => (h[campo] || []).forEach(r => { const x = t[r.jogador] = t[r.jogador] || [0, 0, 0]; if (r.status === 'exact') x[0]++; if (r.status === 'close') x[1]++; if (r.status === 'bust') x[2]--; })); return t; };
   function telaFinal() {
-    const rank = estado.jogadores.map(j => [j.nome, estado.placar[j.id] || 0]).sort((a, b) => b[1] - a[1]);
-    const top = rank[0][1];
-    const camp = rank.filter(r => r[1] === top).map(r => r[0]);
+    const tbs = tbNL(estado.historico, 'res');
+    const cl = C.classificar(estado.jogadores.map(j => ({ nome: j.nome, pts: estado.placar[j.id] || 0, tb: tbs[j.id] || [] })), ['cravar mais vezes', 'ficar mais vezes com o palpite mais perto', 'estourar menos vezes']);
+    const rank = cl.rank, camp = cl.camp;
     if (souHost) window.Ranking && Ranking.registrar(H, 'nolimite-sala', rank.map(r => r[0]), camp);
     render(`
       <div class="center" style="margin-top:10px"><div class="trophy">🏆</div>
         <p class="muted" style="margin:6px 0 0">${camp.length > 1 ? 'Empate! Campeões da vez' : 'Campeão da vez'}</p>
         <h1 class="logo" style="font-size:2.4rem">${camp.map(esc).join(' & ')}</h1></div>
+      ${C.htmlDesempate(cl.motivo)}
       ${C.htmlPodio(rank)}
       <div class="card"><span class="label">Classificação final</span>${tabelaPlacar()}</div>
       ${souHost ? '<button class="btn" id="denovo">Nova partida na mesma sala</button>' : '<p class="muted center">O anfitrião pode começar outra partida.</p>'}

@@ -342,11 +342,12 @@
 
   function telaFinal() {
     const duvido = estado.cfg.estilo === 'duvido';
-    let camp, sub;
+    let camp, sub, desempate = null;
     if (duvido) { camp = estado.ordem.filter(id => estado.vivos.includes(id)).map(nomeDe); sub = camp.length > 1 ? 'Sobreviventes' : 'Último em pé'; }
     else {
-      const rank = estado.jogadores.map(j => [j.nome, estado.placar[j.id] || 0]).sort((a, b) => estado.cfg.estilo === 'reverso' ? a[1] - b[1] : b[1] - a[1]);
-      camp = rank.filter(r => r[1] === rank[0][1]).map(r => r[0]); sub = camp.length > 1 ? 'Empate! Campeões da vez' : 'Campeão da vez';
+      const rev = estado.cfg.estilo === 'reverso';
+      const cl = C.classificar(estado.jogadores.map(j => { const ac = estado.chutes.filter(c => c.jogador === j.id && c.item); return { nome: j.nome, pts: estado.placar[j.id] || 0, tb: [ac.length, ac.length ? (rev ? -Math.min(...ac.map(c => c.item.pos)) : Math.max(...ac.map(c => c.item.pos))) : (rev ? -9999 : 0)] }; }), ['acertar mais itens da lista', 'dar o melhor chute'], rev);
+      camp = cl.camp; desempate = cl.motivo; sub = camp.length > 1 ? 'Empate! Campeões da vez' : 'Campeão da vez';
     }
     if (souHost) window.Ranking && Ranking.registrar(H, 'top100-sala', estado.jogadores.map(j => j.nome), camp);
     const quem = {}; estado.chutes.forEach(c => { if (c.item) quem[c.item.pos + '|' + c.item.nome] = nomeDe(c.jogador); });
@@ -354,6 +355,7 @@
     render(`
       <div class="center" style="margin-top:10px"><div class="trophy">🏆</div><p class="muted" style="margin:6px 0 0">${estado.acabouLista ? 'A lista acabou! ' : ''}${sub}</p>
         <h1 class="logo" style="font-size:2.4rem">${camp.map(esc).join(' & ')}</h1></div>
+      ${C.htmlDesempate(desempate)}
       ${duvido ? '' : `<div class="card"><span class="label">Classificação final</span>${placarHtml()}</div>`}
       ${estado.log.length ? `<div class="card"><span class="label">Eliminações</span>${estado.log.map(l => `<p class="small" style="margin:6px 0">${esc(l)}</p>`).join('')}</div>` : ''}
       ${blefes.length ? `<div class="card"><span class="label">Passaram sem ninguém duvidar, mas não estavam 🤫</span>${blefes.map(b => `<p class="small" style="margin:6px 0"><strong>${esc(nomeDe(b.jogador))}</strong>: ${esc(b.texto)}${b.foraPos ? ` (era o #${b.foraPos})` : ''}</p>`).join('')}</div>` : ''}

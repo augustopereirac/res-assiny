@@ -146,6 +146,33 @@
     root.querySelectorAll('[data-down]').forEach(b => b.onclick = () => { const i = +b.dataset.down; [jogadores[i + 1], jogadores[i]] = [jogadores[i], jogadores[i + 1]]; salvar(); });
   };
 
+  // Classificação com desempate. lista: [{nome, pts, tb: [números, maior = melhor]}], rotulos: texto de cada critério.
+  // Devolve { rank: [[nome, pts]], camp: [nomes], motivo: texto ou null }
+  C.classificar = (lista, rotulos, menorMelhor) => {
+    const cmpTb = (a, b) => { for (let i = 0; i < Math.max(a.tb.length, b.tb.length); i++) { const d = (b.tb[i] || 0) - (a.tb[i] || 0); if (d) return d; } return 0; };
+    const l = lista.slice().sort((a, b) => (menorMelhor ? a.pts - b.pts : b.pts - a.pts) || cmpTb(a, b));
+    if (!l.length) return { rank: [], ordem: [], camp: [], motivo: null };
+    let vivos = l.filter(x => x.pts === l[0].pts), motivo = null;
+    if (vivos.length > 1) {
+      const nomes = vivos.map(x => x.nome);
+      const lista2 = n => n.length > 1 ? n.slice(0, -1).join(', ') + ' e ' + n[n.length - 1] : n[0];
+      const passos = [];
+      for (let i = 0; i < rotulos.length && vivos.length > 1; i++) {
+        const top = Math.max(...vivos.map(x => x.tb[i] || 0));
+        const fica = vivos.filter(x => (x.tb[i] || 0) === top);
+        if (fica.length < vivos.length) {
+          const seg = Math.max(...vivos.filter(x => (x.tb[i] || 0) !== top).map(x => x.tb[i] || 0));
+          passos.push(`${lista2(fica.map(x => x.nome))} ${fica.length > 1 ? 'ficaram na frente' : 'venceu'} por ${rotulos[i]} (${Math.abs(top)} x ${Math.abs(seg)})`);
+          vivos = fica;
+        }
+      }
+      if (passos.length) motivo = `Desempate (${lista2(nomes)} empataram nos pontos): ${passos.join('; ')}.`;
+      if (vivos.length > 1) motivo = (motivo ? motivo + ' ' : '') + `${lista2(vivos.map(x => x.nome))} empataram também nos critérios de desempate (${rotulos.join(', ')}).`;
+    }
+    return { rank: l.map(x => [x.nome, x.pts]), ordem: l, camp: vivos.map(x => x.nome), motivo };
+  };
+  C.htmlDesempate = m => m ? `<p class="muted small center" style="margin:-4px 0 12px">⚖️ ${C.esc(m)}</p>` : '';
+
   // Pódio + tabela final a partir de [[nome, pontos], ...] ordenado
   C.htmlPodio = (rank, unidade) => {
     const pod = rank.slice(0, 3);

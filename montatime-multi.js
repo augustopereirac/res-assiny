@@ -167,6 +167,8 @@
     const t = document.getElementById('trocar'); if (t) t.onclick = () => { if (Object.keys(estado.escolheu).length && !confirm('Trocar o tema? Quem já escolheu vai escolher de novo.')) return; sala.enviar('trocarTema'); };
   }
 
+const tbTime = (slots, maior) => Object.values(slots || {}).filter(Boolean).map(x => maior ? x.v : -x.v).sort((a, b) => b - a);
+  const ROT_MT = ['ter o melhor jogador do time', 'o 2º melhor jogador', 'o 3º melhor jogador', 'o 4º melhor jogador', 'o 5º melhor jogador', 'o 6º melhor jogador', 'o 7º melhor jogador'];
   function placar() {
     const c = C_();
     const r = estado.jogadores.map(j => [j.id, F.total(estado.times[j.id] || {})]).sort((a, b) => c.maior ? b[1] - a[1] : a[1] - b[1]);
@@ -183,11 +185,11 @@
   }
   function telaFinal() {
     const c = C_();
-    const r = estado.jogadores.map(j => [j.id, F.total(estado.times[j.id] || {})]).sort((a, b) => c.maior ? b[1] - a[1] : a[1] - b[1]);
-    const camp = r.filter(x => x[1] === r[0][1]).map(x => nomeDe(x[0]));
+    const cl = C.classificar(estado.jogadores.map(j => ({ id: j.id, nome: j.nome, pts: F.total(estado.times[j.id] || {}), tb: tbTime(estado.times[j.id], c.maior) })), ROT_MT, !c.maior);
+    const camp = cl.camp, r = cl.ordem.map(x => [x.id, x.pts]);
     if (souHost) window.Ranking && Ranking.registrar(H, 'montatime-sala', estado.jogadores.map(j => j.nome), camp);
     render(`<div class="center" style="margin-top:10px"><div class="trophy">🏆</div><p class="muted" style="margin:6px 0 0">${esc(c.nome)} · ${camp.length > 1 ? 'Empate!' : 'Campeão'}</p><h1 class="logo" style="font-size:2.3rem">${camp.map(esc).join(' & ')}</h1></div>
-      <div class="card"><span class="label">Classificação</span>${placar()}</div>
+      ${C.htmlDesempate(cl.motivo)}<div class="card"><span class="label">Classificação</span><table class="score">${cl.rank.map(([n, v]) => `<tr><td>${esc(n)}</td><td>${esc(c.fmt(v))}</td></tr>`).join('')}</table></div>
       ${r.map(([id, v]) => `<div style="margin-bottom:14px">${F.htmlCampo(estado.times[id], c, `${esc(nomeDe(id))} · ${esc(c.fmt(v))}`)}</div>`).join('')}
       <div class="card"><span class="label">Temas da partida</span>${(estado.historico || []).map((h, i) => `<p class="small" style="margin:6px 0"><strong>${i + 1}. ${esc(h.tema)}</strong><br>${h.linhas.map(l => `${esc(l.nome)}: ${esc(l.jogador)} ${l.ok ? '✅' : '❌'}`).join(' · ')}</p>`).join('')}</div>
       ${souHost ? '<button class="btn" id="denovo">Nova partida na mesma sala</button>' : ''}<a class="btn ghost" href="index.html">Voltar aos jogos</a>`);

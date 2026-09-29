@@ -127,12 +127,16 @@
   const placar = (escondido) => `<table class="score">${(escondido ? Object.entries(p.placar).map(([n, v]) => [n, p.acertou[n] === p.passo ? v - (N() - p.passo + 1) : v]).sort((a, b) => b[1] - a[1]) : ranking()).map(([n, v]) => `<tr><td>${esc(n)}</td><td>${C.plural(v, 'pt')}</td></tr>`).join('')}</table>`;
 
   function telaFinal() {
-    const rank = ranking(), top = rank[0][1], camp = rank.filter(r => r[1] === top).map(r => r[0]);
+    const cl = C.classificar(cfg.jogadores.map(n => {
+      const ac = p.hist.filter(h => h.acertos[n]); return { nome: n, pts: p.placar[n], tb: [ac.length, -ac.reduce((t, h) => t + h.acertos[n], 0)] };
+    }), ['acertar mais jogadores', 'precisar de menos clubes (soma dos clubes vistos nos acertos)']);
+    const rank = cl.rank, camp = cl.camp;
     window.Ranking && Ranking.registrar(p, 'carreira', cfg.jogadores, camp);
     render(`<div class="center" style="margin-top:10px"><div class="trophy">🏆</div><p class="muted" style="margin:6px 0 0">${camp.length > 1 ? 'Empate!' : 'Campeão'}</p>
       <h1 class="logo" style="font-size:2.3rem">${camp.map(esc).join(' & ')}</h1></div>
+      ${C.htmlDesempate(cl.motivo)}
       ${cfg.jogadores.length > 1 ? C.htmlPodio(rank) : ''}
-      <div class="card"><span class="label">Classificação</span>${placar()}</div>
+      <div class="card"><span class="label">Classificação</span><table class="score">${rank.map(([n, v]) => `<tr><td>${esc(n)}</td><td>${C.plural(v, 'pt')}</td></tr>`).join('')}</table></div>
       <div class="card"><span class="label">Jogadores da partida</span>${p.hist.map((h, i) => `<p class="small" style="margin:4px 0">${i + 1}. <strong>${esc(h.nome)}</strong></p>`).join('')}</div>
       <button class="btn" id="denovo">Jogar de novo</button>
       <button class="btn secondary" id="config">Mudar jogadores / opções</button>

@@ -29,7 +29,7 @@
   function publico() {
     const a = H.alvoId ? F.porId[H.alvoId] : null, rev = H.fase === 'revelado' || H.fase === 'final';
     return {
-      fase: H.fase, cfg: H.cfg, trocas: H.trocas || 0, aviso: H.aviso || '', rodada: H.rodada, jogadores: H.jogadores || [], placar: H.placar || {},
+      fase: H.fase, cfg: H.cfg, trocas: H.trocas || 0, aviso: H.aviso || '', rodada: H.rodada, jogadores: H.jogadores || [], placar: H.placar || {}, tb: H.fase === 'final' ? (H.tb || {}) : null,
       alvo: a ? { nome: a.nome, pos: F.descPos(a), ano: a.ano, n: a.car.length } : null,
       embaralhado: H.embaralhado || [], enviaram: Object.fromEntries(Object.keys(H.resp || {}).map(k => [k, true])),
       certo: rev && a ? a.car.map(c => ({ nome: c.nome, anos: F.anos(c) })) : null,
@@ -40,7 +40,7 @@
   function iniciar() {
     const js = presentes.map(p => ({ id: p.id, nome: p.nome }));
     if (!js.length) return;
-    H.jogadores = js; H.rkId = null; H.placar = Object.fromEntries(js.map(j => [j.id, 0])); H.rodada = 0; H.usados = [];
+    H.jogadores = js; H.rkId = null; H.placar = Object.fromEntries(js.map(j => [j.id, 0])); H.tb = {}; H.rodada = 0; H.usados = [];
     novaRodada();
   }
   function novaRodada(trocar) {
@@ -70,6 +70,8 @@
       const ac = r.filter((n, i) => n === certo[i]).length, pts = ac + (ac === certo.length ? 3 : 0);
       H.resultado[id] = { ac, pts }; H.placar[id] += pts;
     });
+    const mx = Math.max(0, ...Object.values(H.resultado).map(x => x.pts)); H.tb = H.tb || {};
+    Object.entries(H.resultado).forEach(([id, x]) => { const t = H.tb[id] = H.tb[id] || [0, 0, 0]; if (x.ac === certo.length) t[0]++; if (x.pts === mx && mx > 0) t[1]++; t[2] += x.ac; });
     H.fase = 'revelado'; publicar();
   }
   function proxima() { if (H.rodada >= H.cfg.rodadas) { H.fase = 'final'; publicar(); } else novaRodada(); }
@@ -129,11 +131,12 @@
     if (souHost) document.getElementById('prox').onclick = proxima;
   }
   function telaFinal() {
-    const rank = Object.entries(estado.placar).map(([id, v]) => [nomeDe(id), v]).sort((a, b) => b[1] - a[1]);
-    const camp = rank.filter(x => x[1] === rank[0][1]).map(x => x[0]);
+    const tb = estado.tb || {};
+    const cl = C.classificar(Object.entries(estado.placar).map(([id, v]) => ({ nome: nomeDe(id), pts: v, tb: tb[id] || [] })), ['acertar mais ordens completas', 'vencer mais rodadas', 'acertar mais posições']);
+    const rank = cl.rank, camp = cl.camp;
     if (souHost) window.Ranking && Ranking.registrar(H, 'ordene-sala', estado.jogadores.map(j => j.nome), camp);
     render(`<div class="center" style="margin-top:10px"><div class="trophy">🏆</div><p class="muted" style="margin:6px 0 0">${camp.length > 1 ? 'Empate!' : 'Campeão'}</p><h1 class="logo" style="font-size:2.3rem">${camp.map(esc).join(' & ')}</h1></div>
-      ${C.htmlPodio(rank)}<div class="card"><span class="label">Classificação</span>${placar()}</div>
+      ${C.htmlDesempate(cl.motivo)}${C.htmlPodio(rank)}<div class="card"><span class="label">Classificação</span><table class="score">${rank.map(([n, v]) => `<tr><td>${esc(n)}</td><td>${C.plural(v, 'pt')}</td></tr>`).join('')}</table></div>
       ${souHost ? '<button class="btn" id="denovo">Nova partida na mesma sala</button>' : ''}<a class="btn ghost" href="index.html">Voltar aos jogos</a>`);
     if (souHost) document.getElementById('denovo').onclick = () => { H.fase = 'lobby'; publicar(); };
   }

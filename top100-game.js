@@ -460,15 +460,15 @@
 
   // ---------- fim ----------
   function telaFinal(acabouLista) {
-    let campeoes, cabecalhoFinal, podio = '', placarHtml = '';
+    let campeoes, cabecalhoFinal, podio = '', placarHtml = '', desempate = null;
     if (cfg.estilo === 'duvido') {
       campeoes = jogo.ordem.filter(j => jogo.vivos.has(j));
       window.Ranking && Ranking.registrar(jogo, 'top100', jogo.ordem, campeoes);
       cabecalhoFinal = (acabouLista ? 'A lista acabou! ' : '') + (campeoes.length > 1 ? 'Sobreviventes' : 'Último em pé');
     } else {
-      const rank = ranking();
-      const topo = rank[0][1];
-      campeoes = rank.filter(r => r[1] === topo).map(r => r[0]);
+      const rev = cfg.estilo === 'reverso';
+      const cl = C.classificar(ranking().map(([n, v]) => { const ac = jogo.chutes.filter(c => c.jogador === n && c.item); return { nome: n, pts: v, tb: [ac.length, ac.length ? (rev ? -Math.min(...ac.map(c => c.item.pos)) : Math.max(...ac.map(c => c.item.pos))) : (rev ? -9999 : 0)] }; }), ['acertar mais itens da lista', 'dar o melhor chute'], rev);
+      const rank = cl.rank; campeoes = cl.camp; desempate = cl.motivo;
       cabecalhoFinal = (acabouLista ? 'A lista acabou! ' : '') + (campeoes.length > 1 ? 'Empate! Campeões da vez' : 'Campeão da vez');
       podio = C.htmlPodio(rank);
       window.Ranking && Ranking.registrar(jogo, 'top100', cfg.jogadores, campeoes);
@@ -485,6 +485,7 @@
         <p class="muted" style="margin:6px 0 0">${cabecalhoFinal}</p>
         <h1 class="logo" style="font-size:2.4rem">${campeoes.map(esc).join(' & ')}</h1>
       </div>
+      ${C.htmlDesempate(desempate)}
       ${podio}
       ${placarHtml}
       ${jogo.log.length ? `<div class="card"><span class="label">Eliminações</span>${jogo.log.map(l => `<p class="small" style="margin:6px 0">${esc(l)}</p>`).join('')}</div>` : ''}
