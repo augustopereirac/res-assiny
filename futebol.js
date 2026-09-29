@@ -45,24 +45,41 @@
       <div class="escolhido hidden" id="${idBase}-esc"></div>
     </div>`;
 
+  // Teclado: a 1ª sugestão já vem marcada; ↑/↓ troca; Enter escolhe e já confirma (Chutar/Confirmar), se der.
   F.ligarBusca = (idBase, onEscolha, filtro) => {
     const inp = document.getElementById(idBase), box = document.getElementById(idBase + '-sugs'), esc_ = document.getElementById(idBase + '-esc');
     if (!inp) return;
-    let atual = null;
+    let atual = null, lista = [], sel = 0;
+    const marcar = () => box.querySelectorAll('.sug').forEach((b, i) => b.classList.toggle('sel', i === sel));
     const mostrar = () => {
-      const lista = F.buscar(inp.value, 8, filtro);
+      lista = F.buscar(inp.value, 8, filtro); sel = 0;
       box.innerHTML = lista.map(j => `<button type="button" class="sug" data-id="${j.id}"><strong>${esc(j.nome)}</strong><span class="muted small">${esc(F.descPos(j))}${j.ano ? ' · ' + j.ano : ''}</span></button>`).join('')
         || (C.norm(inp.value).length >= 2 ? '<div class="muted small" style="padding:8px 4px">Nenhum jogador com esse nome no banco.</div>' : '');
-      box.querySelectorAll('.sug').forEach(b => b.onclick = () => escolher(F.porId[b.dataset.id]));
+      box.querySelectorAll('.sug').forEach((b, i) => { b.onclick = () => escolher(F.porId[b.dataset.id]); b.onmouseenter = () => { sel = i; marcar(); }; });
+      marcar();
     };
     const escolher = j => {
-      atual = j;
+      atual = j; lista = [];
       inp.value = j.nome; box.innerHTML = '';
       esc_.innerHTML = `✔ <strong>${esc(j.nome)}</strong> <span class="muted small">${esc(F.descPos(j))}${j.ano ? ' · ' + j.ano : ''}</span>`;
       esc_.classList.remove('hidden');
       onEscolha(j);
     };
+    const confirmar = () => {
+      // aperta o botão principal da tela (Chutar / Confirmar), se estiver liberado
+      const b = ['chutar', 'confirmar'].map(id => document.getElementById(id)).find(x => x && !x.disabled);
+      if (b) b.click();
+    };
     inp.oninput = () => { if (atual) { atual = null; esc_.classList.add('hidden'); onEscolha(null); } mostrar(); };
+    inp.onkeydown = e => {
+      if (e.key === 'ArrowDown' && lista.length) { e.preventDefault(); sel = (sel + 1) % lista.length; marcar(); }
+      else if (e.key === 'ArrowUp' && lista.length) { e.preventDefault(); sel = (sel - 1 + lista.length) % lista.length; marcar(); }
+      else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (lista.length) { escolher(lista[sel]); setTimeout(confirmar, 0); }
+        else if (atual) confirmar();
+      } else if (e.key === 'Escape' && lista.length) { box.innerHTML = ''; lista = []; }
+    };
     inp.focus();
   };
 

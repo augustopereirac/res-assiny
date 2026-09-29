@@ -293,3 +293,4 @@ table.score.rank th{font-size:.75rem;color:var(--muted,#9aa);text-align:left;fon
 .barra-ausentes .btn{width:auto;margin:0;white-space:nowrap}
 .badge-treino{position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:70;background:#2b3a1f;border:1px solid #9be26b;color:#d9ffc2;font-weight:700;font-size:.75rem;padding:4px 10px;border-radius:999px;pointer-events:none;white-space:nowrap}
 .treino-chip.on{background:#2b3a1f;border-color:#9be26b;color:#d9ffc2}
+.sug.sel { border-color: var(--accent2); background: color-mix(in srgb, var(--accent2) 14%, var(--bg2)); }
