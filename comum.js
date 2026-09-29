@@ -122,6 +122,7 @@
         <button class="btn small" type="submit">Adicionar</button>
       </form>
       <div id="cadChips">${global.Ranking ? global.Ranking.htmlChips(jogadores, 'data-cad') : ''}</div>
+      ${global.Ranking ? `<div style="margin-top:12px">${global.Ranking.htmlTreino()}</div>` : ''}
     </div>`;
 
   C.ligarEditorJogadores = (root, jogadores, aoMudar) => {
@@ -135,6 +136,7 @@
       if (jogadores.some(j => j.toLowerCase() === nome.toLowerCase())) { C.toast('Esse nome já está na lista.'); return; }
       jogadores.push(nome); salvar(true);
     };
+    if (global.Ranking) global.Ranking.ligarTreino(aoMudar);
     const ligarChips = () => root.querySelectorAll('[data-cad]').forEach(b => b.onclick = () => { const n = b.dataset.cad; if (!jogadores.some(j => j.toLowerCase() === n.toLowerCase())) { jogadores.push(n); salvar(); } });
     ligarChips();
     if (global.Ranking) global.Ranking.atualizar().then(() => { const box = root.querySelector('#cadChips'); if (box) { box.innerHTML = global.Ranking.htmlChips(jogadores, 'data-cad'); ligarChips(); } });

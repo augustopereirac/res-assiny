@@ -34,7 +34,7 @@
 
   // ---------- configuração ----------
   function telaSetup() {
-    const pode = cfg.jogadores.length >= 2;
+    const pode = cfg.jogadores.length >= (cfg.estilo === 'duvido' ? 2 : 1);
     const temas = [...new Set(LISTAS.map(l => l.tema))];
     const cabem = LISTAS.filter(l => maxPos(l) >= cfg.tamanho);
     const opt = (key, val, label, desc) => `<button class="list-opt ${cfg[key] === val ? 'on' : ''}" data-k="${key}" data-v="${val}"><strong>${label}</strong>${desc ? `<span class="muted small">${desc}</span>` : ''}</button>`;

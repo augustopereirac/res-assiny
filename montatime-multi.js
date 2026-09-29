@@ -103,7 +103,7 @@
   }
   function telaLobby() {
     const cfg = estado.cfg;
-    render(`${topo('Monta o Time')}${Sala.htmlCodigo(sala.codigo)}${Sala.htmlJogadores(presentes, sala.id)}
+    render(`${topo('Monta o Time')}${Sala.htmlCodigo(sala.codigo)}${Sala.htmlJogadores(presentes, sala.id)}${Sala.htmlTreino(!!(estado.cfg && estado.cfg.treino), souHost)}
       ${souHost ? `<div class="card"><span class="label">Critério da partida</span>
           <button class="list-opt ${cfg.crit === 'sortear' ? 'on' : ''}" data-crit="sortear"><strong>🎲 Sortear</strong></button>
           ${F.CRITERIOS.map(c => `<button class="list-opt ${cfg.crit === c.id ? 'on' : ''}" data-crit="${c.id}"><strong>${esc(c.nome)}</strong><span class="muted small">${esc(c.desc)}</span></button>`).join('')}</div>
@@ -111,6 +111,7 @@
         <button class="btn" id="comecar" ${presentes.length >= 2 ? '' : 'disabled'}>Começar com ${C.plural(presentes.length, 'jogador', 'jogadores')}</button>`
         : '<p class="muted center">O anfitrião escolhe o critério e começa.</p>'}`);
     Sala.ligarCodigo(sala.codigo);
+    if (souHost) Sala.ligarTreino(() => { H.cfg.treino = !H.cfg.treino; publicar(); });
     if (!souHost) return;
     app.querySelectorAll('[data-crit]').forEach(b => b.onclick = () => { H.cfg.crit = b.dataset.crit; publicar(); });
     app.querySelectorAll('[data-gp]').forEach(b => b.onclick = () => { const g = b.dataset.gp; H.cfg.grupos = H.cfg.grupos.includes(g) ? H.cfg.grupos.filter(x => x !== g) : [...H.cfg.grupos, g]; if (!H.cfg.grupos.length) H.cfg.grupos = [g]; publicar(); });

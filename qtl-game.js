@@ -24,7 +24,7 @@
 
   // ---------- configuração ----------
   function telaSetup() {
-    const pode = cfg.jogadores.length >= 2;
+    const pode = cfg.jogadores.length >= (cfg.modo === 'duvido' ? 2 : 1);
     const comps = [...new Set(JOGOS.map(j => j.competicao))];
     render(`
       <div class="topbar"><a class="link-back" href="index.html">← Jogos</a></div>

@@ -226,7 +226,7 @@
     render(`
       ${topo('Quem Tava Lá')}
       ${Sala.htmlCodigo(sala.codigo)}
-      ${Sala.htmlJogadores(presentes, sala.id)}
+      ${Sala.htmlJogadores(presentes, sala.id)}${Sala.htmlTreino(!!(estado.cfg && estado.cfg.treino), souHost)}
       ${souHost ? `
         <div class="card"><span class="label">Modo</span>
           <button class="list-opt ${cfg.modo === 'duvido' ? 'on' : ''}" data-modo="duvido"><strong>✋ Com "Duvido"</strong><span class="muted small">Os outros duvidam no próprio celular. O app só confere quando alguém duvida.</span></button>
@@ -239,6 +239,7 @@
       ` : `<p class="muted center">${cfg.modo === 'duvido' ? '✋ Com Duvido' : '✅ Sem Duvido'}. O anfitrião vai começar.</p>`}
     `);
     Sala.ligarCodigo(sala.codigo);
+    if (souHost) Sala.ligarTreino(() => { H.cfg.treino = !H.cfg.treino; publicar(); });
     if (!souHost) return;
     app.querySelectorAll('[data-modo]').forEach(b => b.onclick = () => { H.cfg.modo = b.dataset.modo; publicar(); });
     app.querySelectorAll('[data-jogo]').forEach(b => b.onclick = () => { H.cfg.jogo = b.dataset.jogo; publicar(); });

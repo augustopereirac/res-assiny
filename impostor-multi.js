@@ -189,7 +189,7 @@
     render(`
       ${topo('Impostor')}
       ${Sala.htmlCodigo(sala.codigo)}
-      ${Sala.htmlJogadores(presentes, sala.id)}
+      ${Sala.htmlJogadores(presentes, sala.id)}${Sala.htmlTreino(!!(estado.cfg && estado.cfg.treino), souHost)}
       ${Object.keys(estado.placar || {}).length ? `<div class="card"><span class="label">Placar da noite</span>${tabelaPlacar()}</div>` : ''}
       ${souHost ? `
         <div class="card">
@@ -214,6 +214,7 @@
       ` : `<p class="muted center">O anfitrião vai começar a partida.</p>`}
     `);
     Sala.ligarCodigo(sala.codigo);
+    if (souHost) Sala.ligarTreino(() => { H.cfg.treino = !H.cfg.treino; publicar(); });
     if (!souHost) return;
     app.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { H.cfg[b.dataset.k] = b.dataset.v; publicar(); });
     app.querySelectorAll('[data-grupo]').forEach(b => b.onclick = () => { H.cfg.grupo = b.dataset.grupo; H.cfg.cats = CATS(H.cfg.grupo); publicar(); });

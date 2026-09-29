@@ -37,8 +37,19 @@
 
   // ---------- partidas ----------
   // obj: o objeto da partida (marca um id para não registrar duas vezes)
+  // modo treino: nada é registrado no ranking. Um celular: chave local; vários: cfg.treino da sala
+  R.treinoLocal = () => !!ls.get('treino', false);
+  R.setTreinoLocal = v => { ls.set('treino', !!v); R.badge(!!v); };
+  R.badge = on => {
+    if (!global.document) return;
+    let b = document.getElementById('badgeTreino');
+    if (!on) { if (b) b.remove(); return; }
+    if (!b) { b = document.createElement('div'); b.id = 'badgeTreino'; b.className = 'badge-treino'; b.textContent = '🧪 TREINO · não conta no ranking'; document.body.appendChild(b); }
+  };
   R.registrar = (obj, jogo, participantes, vencedores) => {
     try {
+      const sala = /-sala$/.test(jogo);
+      if (sala ? (obj.cfg && obj.cfg.treino) : R.treinoLocal()) return;
       participantes = [...new Set((participantes || []).map(R.canonico))];
       vencedores = [...new Set((vencedores || []).map(R.canonico))].filter(v => participantes.includes(v));
       if (participantes.length < 2 || !vencedores.length) return;
@@ -88,5 +99,14 @@
     return l.length ? `<div class="cad-chips"><span class="muted small">Cadastrados:</span>${l.map(n => `<button type="button" class="chip" ${attr}="${C.esc(n)}">+ ${C.esc(n)}</button>`).join('')}</div>` : '';
   };
 
+  // página de um celular: mostra o selo se o treino estiver ligado
+  if (global.document && !/-sala\.html$/.test(location.pathname)) {
+    const mostrar = () => R.badge(R.treinoLocal());
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mostrar); else mostrar();
+  }
+  // botão de treino (um celular). Use htmlTreino() no setup e ligarTreino(aoMudar)
+  R.htmlTreino = () => `<button type="button" class="chip treino-chip ${R.treinoLocal() ? 'on' : ''}" id="treinoBtn">🧪 Modo treino ${R.treinoLocal() ? 'LIGADO' : 'desligado'}</button>
+    <p class="muted small" style="margin:6px 0 0">No treino a partida não conta no ranking e dá para jogar sozinho.</p>`;
+  R.ligarTreino = aoMudar => { const b = document.getElementById('treinoBtn'); if (b) b.onclick = () => { R.setTreinoLocal(!R.treinoLocal()); aoMudar(); }; };
   global.Ranking = R;
 })(window);

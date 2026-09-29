@@ -238,7 +238,7 @@
     render(`
       ${topo('Top ' + cfg.tamanho)}
       ${Sala.htmlCodigo(sala.codigo)}
-      ${Sala.htmlJogadores(presentes, sala.id)}
+      ${Sala.htmlJogadores(presentes, sala.id)}${Sala.htmlTreino(!!(estado.cfg && estado.cfg.treino), souHost)}
       ${souHost ? `
         <div class="card"><span class="label">Tamanho</span>
           <div class="chips">${TAMANHOS.map(n => `<button class="chip ${cfg.tamanho === n ? 'on' : ''}" data-tam="${n}">Top ${n}</button>`).join('')}</div></div>
@@ -260,6 +260,7 @@
       ` : `<p class="muted center">Top ${cfg.tamanho} · ${nomeEstilo(cfg.estilo)}. O anfitrião vai começar.</p>`}
     `);
     Sala.ligarCodigo(sala.codigo);
+    if (souHost) Sala.ligarTreino(() => { H.cfg.treino = !H.cfg.treino; publicar(); });
     if (!souHost) return;
     const set = (k, v) => { H.cfg[k] = v; publicar(); };
     app.querySelectorAll('[data-k]').forEach(b => b.onclick = () => set(b.dataset.k, b.dataset.v));

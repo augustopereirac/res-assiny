@@ -83,12 +83,13 @@
   }
   function telaLobby() {
     const cfg = estado.cfg;
-    render(`${topo('Ordene a Carreira')}${Sala.htmlCodigo(sala.codigo)}${Sala.htmlJogadores(presentes, sala.id)}
+    render(`${topo('Ordene a Carreira')}${Sala.htmlCodigo(sala.codigo)}${Sala.htmlJogadores(presentes, sala.id)}${Sala.htmlTreino(!!(estado.cfg && estado.cfg.treino), souHost)}
       ${souHost ? `<div class="card"><span class="label">Jogadores sorteados</span>
           ${Object.entries(F.POOLS).map(([k, v]) => `<button class="list-opt ${cfg.pool === k ? 'on' : ''}" data-pool="${k}"><strong>${esc(v.nome)}</strong></button>`).join('')}
           <span class="label" style="margin-top:12px">Rodadas</span><div class="chips">${[3, 5, 10, 15].map(n => `<button class="chip ${cfg.rodadas === n ? 'on' : ''}" data-rod="${n}">${n}</button>`).join('')}</div></div>
         <button class="btn" id="comecar">Começar com ${C.plural(presentes.length, 'jogador', 'jogadores')}</button>` : '<p class="muted center">O anfitrião vai começar.</p>'}`);
     Sala.ligarCodigo(sala.codigo);
+    if (souHost) Sala.ligarTreino(() => { H.cfg.treino = !H.cfg.treino; publicar(); });
     if (!souHost) return;
     app.querySelectorAll('[data-pool]').forEach(b => b.onclick = () => { H.cfg.pool = b.dataset.pool; publicar(); });
     app.querySelectorAll('[data-rod]').forEach(b => b.onclick = () => { H.cfg.rodadas = +b.dataset.rod; publicar(); });

@@ -17,7 +17,7 @@
   let p = null;
 
   function telaSetup() {
-    const pode = cfg.jogadores.length >= 2;
+    const pode = cfg.jogadores.length >= 1;
     render(`
       <div class="topbar"><a class="link-back" href="index.html">← Jogos</a></div>
       <div class="modo-toggle"><span class="on">📱 Um celular</span><a href="montatime-sala.html">📲 Vários celulares</a></div>

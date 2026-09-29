@@ -134,7 +134,7 @@
     render(`
       ${topo('No Limite')}
       ${Sala.htmlCodigo(sala.codigo)}
-      ${Sala.htmlJogadores(presentes, sala.id)}
+      ${Sala.htmlJogadores(presentes, sala.id)}${Sala.htmlTreino(!!(estado.cfg && estado.cfg.treino), souHost)}
       ${souHost ? `
         <div class="card">
           <span class="label">Número de rodadas</span>
@@ -146,6 +146,7 @@
       ` : `<p class="muted center">O anfitrião vai começar o jogo. ${cfg.rodadas} rodadas.</p>`}
     `);
     Sala.ligarCodigo(sala.codigo);
+    if (souHost) Sala.ligarTreino(() => { H.cfg.treino = !H.cfg.treino; publicar(); });
     if (!souHost) return;
     app.querySelectorAll('[data-rod]').forEach(b => b.onclick = () => { H.cfg.rodadas = +b.dataset.rod; publicar(); });
     app.querySelectorAll('[data-tema]').forEach(b => b.onclick = () => {

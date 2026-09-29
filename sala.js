@@ -101,7 +101,7 @@
       },
       publicar(estado) {
         if (!ehHost) return;
-        ultimoEstado = estado;
+        ultimoEstado = estado; selo(estado);
         ch.send({ type: 'broadcast', event: 'estado', payload: estado });
         if (o.onEstado) o.onEstado(estado);
         enviarSnap();
@@ -120,7 +120,8 @@
       sair() { try { ch.untrack(); sb.removeChannel(ch); } catch (e) {} }
     };
 
-    ch.on('broadcast', { event: 'estado' }, ({ payload }) => { if (!ehHost && o.onEstado) o.onEstado(payload); });
+    const selo = e => { if (global.Ranking && e) global.Ranking.badge(!!(e.cfg && e.cfg.treino)); };
+    ch.on('broadcast', { event: 'estado' }, ({ payload }) => { selo(payload); if (!ehHost && o.onEstado) o.onEstado(payload); });
     ch.on('broadcast', { event: 'snap' }, ({ payload }) => {
       if (ehHost || !payload) return;
       snap = payload;
@@ -167,6 +168,12 @@
 
   // Aviso para o anfitrião quando alguém da partida saiu da sala (o jogo não trava esperando por ele).
   // ativos: ids que o jogo espera; presentes: [{id}]; nome(id); onTirar(ids)
+  // modo treino na sala: o anfitrião liga/desliga no lobby
+  const htmlTreino = (on, host) => host
+    ? `<div class="card"><button type="button" class="chip treino-chip ${on ? 'on' : ''}" id="treinoSala">🧪 Modo treino ${on ? 'LIGADO' : 'desligado'}</button><p class="muted small" style="margin:6px 0 0">No treino a partida não conta no ranking.</p></div>`
+    : (on ? '<div class="card center"><strong>🧪 Partida de treino</strong><div class="muted small">Não conta no ranking.</div></div>' : '');
+  const ligarTreino = fn => { const b = document.getElementById('treinoSala'); if (b) b.onclick = fn; };
+
   function barraAusentes(ativos, presentes, nome, onTirar) {
     let bar = document.getElementById('barraAusentes');
     const aus = (ativos || []).filter(id => !presentes.some(p => p.id === id));
@@ -271,5 +278,5 @@
   const carregarHost = (jogo, codigo) => { try { return JSON.parse(localStorage.getItem(`noite:host:${jogo}:${codigo}`) || 'null'); } catch (e) { return null; } };
   const souHostDe = jogo => ss.get(`noite:souHost:${jogo}`);
 
-  global.Sala = { conectar, barraAusentes, telaEntrada, htmlCodigo, ligarCodigo, htmlJogadores, gerarCodigo, meuId, salvarHost, carregarHost, souHostDe, linkSala };
+  global.Sala = { conectar, barraAusentes, htmlTreino, ligarTreino, telaEntrada, htmlCodigo, ligarCodigo, htmlJogadores, gerarCodigo, meuId, salvarHost, carregarHost, souHostDe, linkSala };
 })(window);

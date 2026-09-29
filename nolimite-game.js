@@ -60,7 +60,7 @@
   function render(html) { app.innerHTML = html; window.scrollTo(0, 0); }
 
   function telaSetup() {
-    const podeComecar = cfg.jogadores.length >= 2 && cfg.temas.length > 0;
+    const podeComecar = cfg.jogadores.length >= 1 && cfg.temas.length > 0;
     const totalTemas = PERGUNTAS.filter(q => cfg.temas.includes(q.c)).length;
     render(`
       <div class="topbar"><a class="link-back" href="index.html">← Jogos</a></div>
@@ -87,6 +87,7 @@
           <button class="btn small" type="submit">Adicionar</button>
         </form>
         <div id="cadChips">${window.Ranking ? Ranking.htmlChips(cfg.jogadores, 'data-cad') : ''}</div>
+        ${window.Ranking ? `<div style="margin-top:12px">${Ranking.htmlTreino()}</div>` : ''}
       </div>
 
       <div class="card">
@@ -121,6 +122,7 @@
       cfg.jogadores.push(nome); salvarCfg(); telaSetup();
       document.getElementById('novoNome').focus();
     };
+    if (window.Ranking) Ranking.ligarTreino(telaSetup);
     const ligarChips = () => app.querySelectorAll('[data-cad]').forEach(b => b.onclick = () => { const n = b.dataset.cad; if (!cfg.jogadores.some(j => j.toLowerCase() === n.toLowerCase())) { cfg.jogadores.push(n); salvarCfg(); telaSetup(); } });
     ligarChips();
     if (window.Ranking) Ranking.atualizar().then(() => { const box = document.getElementById('cadChips'); if (box) { box.innerHTML = Ranking.htmlChips(cfg.jogadores, 'data-cad'); ligarChips(); } });
