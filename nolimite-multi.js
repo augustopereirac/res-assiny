@@ -15,6 +15,11 @@
   let meuPalpite = null, rodadaPalpite = null; // palpite enviado nesta rodada (tela do jogador)
   // Estado privado do anfitrião
   let H = null;
+  // perguntas já vistas neste aparelho (mesma lista do modo um celular)
+  const lerVistas = () => { try { return JSON.parse(localStorage.getItem('nolimite:vistas') || '[]'); } catch (e) { return []; } };
+  const marcarVista = id => { const v = lerVistas(); if (!v.includes(id)) { v.push(id); try { localStorage.setItem('nolimite:vistas', JSON.stringify(v)); } catch (e) {} } };
+  let mandouVistas = false;
+  const enviarVistas = () => { if (sala) sala.enviar('vistas', { ids: lerVistas() }); };
 
   // ---------- entrada ----------
   Sala.telaEntrada(app, 'No Limite', 'nolimite.html', (nome, codigo, criar) => {
@@ -30,12 +35,12 @@
     render('<div class="pass"><div class="emoji">📡</div><p class="muted">Conectando…</p></div>');
     sala = Sala.conectar({
       jogo: JOGO, codigo, nome, host: souHost,
-      onEstado: e => { if (e.fase === 'lobby' || e.rodada !== rodadaPalpite) meuPalpite = null; estado = e; desenhar(); },
+      onEstado: e => { if (!mandouVistas) { mandouVistas = true; enviarVistas(); } if (e.pergunta && e.pergunta.id) marcarVista(e.pergunta.id); if (e.fase === 'lobby' || e.rodada !== rodadaPalpite) meuPalpite = null; estado = e; desenhar(); },
       onAcao: acaoHost, snapshot: () => H,
       onVirarHost: h => { if (h) Sala.salvarHost(JOGO, codigo, h); souHost = true; iniciarH(); app.innerHTML = ''; toast('👑 O anfitrião saiu. Agora você é o anfitrião da sala.'); publicar(); },
       onDeixarHost: () => { souHost = false; const b = document.getElementById('barraAusentes'); if (b) b.remove(); },
       onPresenca: lista => { presentes = lista; if (souHost) publicar(); else desenhar(); },
-      onStatus: st => { if (st === 'SUBSCRIBED') { if (souHost) publicar(); else if (!estado) desenhar(); } if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') toast('Problema de conexão. Tentando de novo…'); }
+      onStatus: st => { if (st === 'SUBSCRIBED') { enviarVistas(); if (souHost) publicar(); else if (!estado) desenhar(); } if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') toast('Problema de conexão. Tentando de novo…'); }
     });
   });
 
@@ -45,7 +50,7 @@
     return {
       fase: H.fase, rodada: H.rodada, total: H.cfg.rodadas, cfg: H.cfg,
       jogadores: H.jogadores, placar: H.placar,
-      pergunta: q ? { c: q.c, p: q.p, u: q.u } : null,
+      pergunta: q ? { id: q.id, c: q.c, p: q.p, u: q.u } : null,
       respondeu: Object.fromEntries(Object.keys(H.palpites).map(k => [k, true])),
       revelado: H.fase === 'revelado' || H.fase === 'final' ? { r: q && q.r, i: q && q.i, resultado: H.resultado } : null,
       historico: H.fase === 'final' ? H.historico : null
@@ -57,14 +62,21 @@
   }
 
   function sortear() {
-    const pool = PERGUNTAS.filter(q => H.cfg.temas.includes(q.c) && !H.usadas.includes(q.id));
-    const base = pool.length ? pool : PERGUNTAS.filter(q => H.cfg.temas.includes(q.c));
+    const vistas = new Set(H.vistasSala || []);
+    const doTema = PERGUNTAS.filter(q => H.cfg.temas.includes(q.c));
+    const novas = doTema.filter(q => !H.usadas.includes(q.id) && !vistas.has(q.id));
+    const pool = novas.length ? novas : doTema.filter(q => !H.usadas.includes(q.id));
+    const base = pool.length ? pool : doTema;
     const q = base[Math.floor(Math.random() * base.length)];
-    H.usadas.push(q.id);
+    H.usadas.push(q.id); marcarVista(q.id);
     return q;
   }
 
   function acaoHost(msg) {
+    if (msg.tipo === 'vistas' && msg.dados && Array.isArray(msg.dados.ids)) {
+      const v = new Set(H.vistasSala || []); msg.dados.ids.forEach(x => { if (Number.isInteger(x)) v.add(x); });
+      H.vistasSala = [...v]; Sala.salvarHost(JOGO, sala.codigo, H); return;
+    }
     if (msg.tipo === 'palpite' && H.fase === 'pergunta' && H.jogadores.some(j => j.id === msg.de)) {
       const v = Math.floor(Number(msg.dados.valor));
       if (Number.isFinite(v) && v >= 0) { H.palpites[msg.de] = v; publicar(); }
