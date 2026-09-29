@@ -159,5 +159,18 @@
     </div>`;
   };
 
+    // Enter aciona o botão principal da tela quando só há uma opção (fora de campos de texto)
+  if (global.document) document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || e.repeat || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = e.target;
+    if (t && (t.closest && t.closest('input, textarea, select, [contenteditable="true"], button, a'))) return;
+    const vis = el => !el.disabled && el.offsetParent !== null && getComputedStyle(el).visibility !== 'hidden';
+    const btns = [...document.querySelectorAll('#app .btn, .btn')].filter((el, i, a) => a.indexOf(el) === i && vis(el));
+    if (!btns.length) return;
+    let alvo = btns.length === 1 ? btns[0] : null;
+    if (!alvo) { const prim = btns.filter(b => !/\b(ghost|secondary|duvido)\b/.test(b.className)); if (prim.length === 1) alvo = prim[0]; }
+    if (!alvo) return;
+    e.preventDefault(); alvo.click();
+  });
   global.Comum = C;
 })(window);
