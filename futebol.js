@@ -162,7 +162,14 @@
       `${C.esc(nomeQuem(c.quem))} ${c.ok ? '✅' + (c.nome ? ' ' + C.esc(c.nome) : ' acertou') : c.passou ? '<span class="muted">passou</span>' : '❌ <strong>' + C.esc(c.nome) + '</strong>'}${c.meu ? ' <span class="muted">(só você vê)</span>' : ''}`).join(' · ')}</p>`).join('')}</div>`;
   };
 
-  F.anos = c => c.ini ? (c.fim && c.fim !== c.ini ? `${c.ini}–${c.fim}` : c.fim === c.ini ? `${c.ini}` : `${c.ini}–`) : '';
+  // fim: null = ainda está no clube (mostra até o ano atual) · 0 = saída desconhecida
+  const ANO = new Date().getFullYear();
+  F.anos = c => {
+    if (!c.ini) return '';
+    const fim = c.fim === null || c.fim === undefined ? Math.max(ANO, c.ini) : c.fim;
+    if (fim === 0) return `${c.ini}–?`;
+    return fim === c.ini ? `${c.ini}` : `${c.ini}–${fim}`;
+  };
   F.POOLS = {
     // famoso = muito citado E passou por um clube grande (evita craques só locais, ex. japoneses com muitas páginas na Wikipédia)
     famosos: { nome: 'Famosos do mundo todo', test: j => j.fama >= 60 && [...j.clubes].some(c => CLUBES_GRANDES.has(c)) },
