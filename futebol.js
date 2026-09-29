@@ -164,7 +164,8 @@
 
   F.anos = c => c.ini ? (c.fim && c.fim !== c.ini ? `${c.ini}–${c.fim}` : c.fim === c.ini ? `${c.ini}` : `${c.ini}–`) : '';
   F.POOLS = {
-    famosos: { nome: 'Famosos do mundo todo', test: j => j.fama >= 60 },
+    // famoso = muito citado E passou por um clube grande (evita craques só locais, ex. japoneses com muitas páginas na Wikipédia)
+    famosos: { nome: 'Famosos do mundo todo', test: j => j.fama >= 60 && [...j.clubes].some(c => CLUBES_GRANDES.has(c)) },
     brasil: { nome: 'Com passagem pelo futebol brasileiro', test: j => j.brasil && j.fama >= 30 },
     todos: { nome: 'Todos do banco (mais difícil)', test: j => j.fama >= 25 }
   };

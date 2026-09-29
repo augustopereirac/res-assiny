@@ -41,8 +41,9 @@
   }
 
   function iniciar() { p = { rodada: 0, usados: [], placar: Object.fromEntries(cfg.jogadores.map(j => [j, 0])) }; novaRodada(); }
-  function novaRodada() {
-    p.rodada++; p.alvo = sortear(); p.respostas = {}; p.vez = 0;
+  function novaRodada(trocar) {
+    if (!trocar) p.rodada++;
+    p.alvo = sortear(); p.respostas = {}; p.vez = 0;
     p.certo = p.alvo.car.map(c => c.nome);
     p.embaralhado = C.shuffle(p.certo.map((n, i) => ({ n, i })));
     // garante que não venha já na ordem certa
@@ -52,14 +53,20 @@
   const cab = () => `<div class="topbar"><span class="pill">Rodada ${p.rodada}/${cfg.rodadas}</span><button class="link-back" id="sair">Sair</button></div>`;
   function ligarSair() { const s = document.getElementById('sair'); if (s) s.onclick = () => { if (confirm('Sair da partida?')) { p = null; telaSetup(); } }; }
   const cartao = () => `<div class="card center"><div class="muted small">Ordene a carreira de</div><div class="question" style="font-size:1.7rem">${esc(p.alvo.nome)}</div>
-    <div class="muted small">${esc(F.descPos(p.alvo))}${p.alvo.ano ? ' · nascido em ' + p.alvo.ano : ''} · ${p.certo.length} passagens</div></div>`;
+    <div class="muted small">${esc(F.descPos(p.alvo))}${p.alvo.ano ? ' · nascido em ' + p.alvo.ano : ''} · ${p.certo.length} passagens</div>
+    <button class="btn ghost small" id="trocarJog" style="margin-top:10px">🔄 Não conheço, trocar jogador</button></div>`;
+  // troca o jogador da rodada (quem já ordenou nesta rodada ordena de novo)
+  function ligarTrocar() {
+    const b = document.getElementById('trocarJog'); if (!b) return;
+    b.onclick = () => { if (Object.keys(p.respostas).length && !confirm('Trocar o jogador? Quem já ordenou nesta rodada vai ordenar de novo.')) return; novaRodada(true); };
+  }
 
   function telaPasse() {
     const nome = cfg.jogadores[p.vez];
     if (cfg.jogadores.length === 1) return telaOrdenar(nome);
     render(`${cab()}${cartao()}<div class="pass" style="padding-top:10px"><p class="muted">Passe o celular para</p><div class="big-name">${esc(nome)}</div>
       <button class="btn" id="sou">Sou ${esc(nome)}, ordenar</button></div>`);
-    ligarSair();
+    ligarSair(); ligarTrocar();
     document.getElementById('sou').onclick = () => telaOrdenar(nome);
   }
 
@@ -73,7 +80,7 @@
           <ol class="car-list">${ordem.map((k, i) => `<li><span class="n">${i + 1}</span><strong>${esc(p.embaralhado[k].n)}</strong></li>`).join('') || '<li class="muted">Nenhum clube ainda</li>'}</ol>
           <div class="row" style="margin-top:10px"><button class="btn secondary small" id="desfazer" ${ordem.length ? '' : 'disabled'}>↩ Desfazer</button><button class="btn secondary small" id="limpar" ${ordem.length ? '' : 'disabled'}>Limpar</button></div></div>
         <button class="btn" id="ok" ${ordem.length === p.embaralhado.length ? '' : 'disabled'}>Confirmar ordem</button>`);
-      ligarSair();
+      ligarSair(); ligarTrocar();
       app.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { ordem.push(+b.dataset.k); desenhar(); });
       document.getElementById('desfazer').onclick = () => { ordem.pop(); desenhar(); };
       document.getElementById('limpar').onclick = () => { ordem.length = 0; desenhar(); };
@@ -101,7 +108,7 @@
         <div class="said">${p.respostas[r.n].map((n, i) => `<span class="said-item ${n === p.certo[i] ? 'ok' : 'miss'}">${i + 1}. ${esc(n)}</span>`).join('')}</div></div>`).join('')}
       <div class="card"><span class="label">Placar</span>${placar()}</div>
       <button class="btn" id="prox">${p.rodada >= cfg.rodadas ? '🏆 Ver campeão' : 'Próximo jogador'}</button>`);
-    ligarSair();
+    ligarSair(); ligarTrocar();
     document.getElementById('prox').onclick = () => p.rodada >= cfg.rodadas ? telaFinal() : novaRodada();
   }
 

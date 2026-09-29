@@ -16,7 +16,7 @@
     render('<div class="pass"><div class="emoji">📡</div><p class="muted">Conectando…</p></div>');
     sala = Sala.conectar({
       jogo: JOGO, codigo, nome, host: souHost,
-      onEstado: e => { if (e.rodada !== rodadaOrdem) { ordem = []; rodadaOrdem = e.rodada; enviado = null; } estado = e; desenhar(); },
+      onEstado: e => { const k = e.rodada + ':' + (e.alvo ? e.alvo.nome : ''); if (estado && e.trocas > (estado.trocas || 0) && e.aviso) toast('🔄 ' + e.aviso); if (k !== rodadaOrdem) { ordem = []; rodadaOrdem = k; enviado = null; } estado = e; desenhar(); },
       onAcao: acaoHost, snapshot: () => H,
       onVirarHost: h => { if (h) Sala.salvarHost(JOGO, codigo, h); souHost = true; iniciarH(); app.innerHTML = ''; toast('👑 O anfitrião saiu. Agora você é o anfitrião da sala.'); publicar(); },
       onDeixarHost: () => { souHost = false; const b = document.getElementById('barraAusentes'); if (b) b.remove(); },
@@ -29,7 +29,7 @@
   function publico() {
     const a = H.alvoId ? F.porId[H.alvoId] : null, rev = H.fase === 'revelado' || H.fase === 'final';
     return {
-      fase: H.fase, cfg: H.cfg, rodada: H.rodada, jogadores: H.jogadores || [], placar: H.placar || {},
+      fase: H.fase, cfg: H.cfg, trocas: H.trocas || 0, aviso: H.aviso || '', rodada: H.rodada, jogadores: H.jogadores || [], placar: H.placar || {},
       alvo: a ? { nome: a.nome, pos: F.descPos(a), ano: a.ano, n: a.car.length } : null,
       embaralhado: H.embaralhado || [], enviaram: Object.fromEntries(Object.keys(H.resp || {}).map(k => [k, true])),
       certo: rev && a ? a.car.map(c => ({ nome: c.nome, anos: F.anos(c) })) : null,
@@ -43,8 +43,8 @@
     H.jogadores = js; H.rkId = null; H.placar = Object.fromEntries(js.map(j => [j.id, 0])); H.rodada = 0; H.usados = [];
     novaRodada();
   }
-  function novaRodada() {
-    H.rodada++;
+  function novaRodada(trocar) {
+    if (!trocar) H.rodada++;
     let pool = F.poolCarreira(H.cfg.pool).filter(j => j.car.length <= 9 && !H.vistos.includes(j.id) && !H.usados.includes(j.id));
     if (!pool.length) { H.vistos = []; pool = F.poolCarreira(H.cfg.pool).filter(j => j.car.length <= 9 && !H.usados.includes(j.id)); }
     const j = pool[Math.floor(Math.random() * pool.length)];
@@ -56,6 +56,7 @@
     publicar();
   }
   function acaoHost(msg) {
+    if (msg.tipo === 'trocarJogador' && H.fase === 'ordenar' && H.jogadores.some(j => j.id === msg.de)) { H.trocas = (H.trocas || 0) + 1; H.aviso = `${(H.jogadores.find(j => j.id === msg.de) || {}).nome || 'Alguém'} trocou o jogador.`; return novaRodada(true); }
     if (msg.tipo !== 'ordem' || H.fase !== 'ordenar' || !H.jogadores.some(j => j.id === msg.de)) return;
     const o = msg.dados.ordem;
     if (!Array.isArray(o) || o.length !== H.embaralhado.length) return;
@@ -108,8 +109,10 @@
           <div class="row" style="margin-top:10px"><button class="btn secondary small" id="desfazer" ${ordem.length ? '' : 'disabled'}>↩ Desfazer</button><button class="btn secondary small" id="limpar" ${ordem.length ? '' : 'disabled'}>Limpar</button></div></div>
         <button class="btn" id="ok" ${ordem.length === estado.embaralhado.length ? '' : 'disabled'}>Confirmar ordem</button>`}
       ${status()}
+      ${eu ? '<button class="btn ghost" id="trocarJog">🔄 Não conheço, trocar jogador</button>' : ''}
       ${souHost ? `<button class="btn secondary" id="revelar" ${n ? '' : 'disabled'}>Revelar agora (${n}/${estado.jogadores.length})</button>` : ''}`);
     const r = document.getElementById('revelar'); if (r) r.onclick = revelar;
+    const tj = document.getElementById('trocarJog'); if (tj) tj.onclick = () => { if (Object.keys(estado.enviaram).length && !confirm('Trocar o jogador? Quem já enviou vai ordenar de novo.')) return; sala.enviar('trocarJogador'); };
     if (!eu || ja) return;
     app.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { ordem.push(+b.dataset.k); telaOrdenar(); });
     document.getElementById('desfazer').onclick = () => { ordem.pop(); telaOrdenar(); };
