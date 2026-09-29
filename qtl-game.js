@@ -23,7 +23,9 @@
   const POS = { GOL: 'Goleiro', ZAG: 'Zagueiro', LAT: 'Lateral', VOL: 'Volante', MEI: 'Meia', ATA: 'Atacante' };
 
   // ---------- configuração ----------
-  function telaSetup() {
+  // rolar: undefined → topo; 'manter' → mesma posição; 'comecar' → desce até o botão Começar
+  function telaSetup(rolar) {
+    const y = window.scrollY;
     const pode = cfg.jogadores.length >= (cfg.modo === 'duvido' ? 2 : 1);
     const comps = [...new Set(JOGOS.map(j => j.competicao))];
     render(`
@@ -64,11 +66,13 @@
 
       <button class="btn" id="comecar" ${pode ? '' : 'disabled'}>Começar</button>
     `);
-    C.ligarEditorJogadores(app, cfg.jogadores, telaSetup);
-    app.querySelectorAll('[data-modo]').forEach(b => b.onclick = () => { cfg.modo = b.dataset.modo; salvar(); telaSetup(); });
+    if (rolar === 'manter') window.scrollTo(0, y);
+    else if (rolar === 'comecar') { window.scrollTo(0, y); C.rolarAte(document.getElementById('comecar')); }
+    C.ligarEditorJogadores(app, cfg.jogadores, () => telaSetup('manter'));
+    app.querySelectorAll('[data-modo]').forEach(b => b.onclick = () => { cfg.modo = b.dataset.modo; salvar(); telaSetup('manter'); });
     app.querySelectorAll('[data-jogo]').forEach(b => b.onclick = e => {
-      if (e.target.id === 'zerar') { vistos = new Set(); store.set('qtl:vistos', []); telaSetup(); return; }
-      cfg.jogo = b.dataset.jogo; salvar(); telaSetup();
+      if (e.target.id === 'zerar') { vistos = new Set(); store.set('qtl:vistos', []); telaSetup('manter'); return; }
+      cfg.jogo = b.dataset.jogo; salvar(); telaSetup('comecar');
     });
     document.getElementById('comecar').onclick = () => iniciar();
   }
@@ -98,7 +102,9 @@
       vez: 0,
       ditos: [], // {jogador, texto, atleta|null, status: 'passou'|'certo'|'duvidado-certo'|'duvidado-errado'|'errou'|'juiz'}
       log: [],
-      offset: ini
+      offset: ini,
+      solo: n === 1, // sozinho: 3 vidas, joga até errar 3 vezes ou acertar todos
+      vidas: 3
     };
     telaApresentacao();
   }
@@ -134,10 +140,12 @@
   }
 
   function cabecalho() {
-    return `<div class="topbar"><span class="pill">${p.vivos.size} na disputa</span><button class="link-back" id="sair">Sair</button></div>`;
+    return `<div class="topbar"><span class="pill">${p.solo ? `${'❤️'.repeat(p.vidas)}${'🖤'.repeat(3 - p.vidas)} · ${acertos()} de ${p.atletas.length}` : `${p.vivos.size} na disputa`}</span><button class="link-back" id="sair">Sair</button></div>`;
   }
 
+  const acertos = () => new Set(p.ditos.filter(d => d.atleta).map(d => d.atleta)).size;
   function chipsJogadores() {
+    if (p.solo) return '';
     return `<div class="chips" style="justify-content:center;margin:10px 0 4px">${p.ordem.map(j => `
       <span class="chip ${p.vivos.has(j) ? (j === p.ordem[p.vez] ? 'on' : '') : 'out'}">${p.vivos.has(j) ? '' : '❌ '}${esc(j)}${p.folgas[j] ? ' 🛡️' : ''}</span>`).join('')}</div>`;
   }
@@ -167,7 +175,7 @@
   }
 
   function verificarFim() {
-    if (p.vivos.size <= 1) { telaFinal(); return true; }
+    if (p.solo ? p.vivos.size === 0 : p.vivos.size <= 1) { telaFinal(); return true; }
     const falados = new Set(p.ditos.filter(d => d.atleta).map(d => d.atleta));
     if (falados.size >= p.atletas.length) { telaFinal('nomes'); return true; }
     return false;
@@ -201,7 +209,7 @@
       ${cartaoJogo()}
       ${chipsJogadores()}
       <div class="card">
-        <p style="margin:0 0 10px"><strong style="font-size:1.4rem">${esc(nome)}</strong>, quem tava lá?</p>
+        <p style="margin:0 0 10px">${p.solo ? '<strong style="font-size:1.4rem">Quem tava lá?</strong><br><span class="muted small">Fale o máximo de nomes que conseguir. Você tem 3 vidas.</span>' : `<strong style="font-size:1.4rem">${esc(nome)}</strong>, quem tava lá?`}</p>
         <form id="f">
           <input type="text" id="nome" autocomplete="off" autocapitalize="words" placeholder="Nome do jogador">
           <button class="btn" type="submit">${cfg.modo === 'duvido' ? 'Falar' : 'Conferir'}</button>
@@ -309,6 +317,12 @@
 
   function resolverErrado(nome, texto) {
     p.ditos.push({ jogador: nome, texto, atleta: null, status: 'errou' });
+    if (p.solo) {
+      p.vidas--;
+      if (p.vidas > 0) return telaRevelacao({ ok: false, titulo: `${texto} não estava`, sub: `Você perdeu uma vida. Restam ${C.plural(p.vidas, 'vida', 'vidas')}.` });
+      p.vivos.delete(nome);
+      return telaRevelacao({ ok: false, titulo: `${texto} não estava`, sub: 'Acabaram as suas vidas.' });
+    }
     p.vivos.delete(nome);
     p.log.push(`${nome} saiu ao falar “${texto}”, que não estava no jogo.`);
     avancarPonteiro();
@@ -352,6 +366,7 @@
   // ---------- fim ----------
   function telaFinal(motivo) {
     const vivos = p.ordem.filter(j => p.vivos.has(j));
+    if (p.solo) return telaFinalSolo(motivo);
     window.Ranking && Ranking.registrar(p, 'qtl', p.ordem, vivos);
     const falados = new Set(p.ditos.filter(d => d.atleta && d.status !== 'passou').map(d => d.atleta.nome));
     const passados = new Set(p.ditos.filter(d => d.status === 'passou').map(d => d.atleta ? d.atleta.nome : null).filter(Boolean));
@@ -382,6 +397,35 @@
       <a class="btn ghost" href="index.html">Voltar aos jogos</a>
     `);
     document.getElementById('denovo').onclick = () => { if (cfg.jogo !== 'sortear') { cfg.jogo = 'sortear'; salvar(); } iniciar(p.offset + 1); };
+    document.getElementById('config').onclick = () => { p = null; telaSetup(); };
+  }
+
+  function telaFinalSolo(motivo) {
+    const falados = new Set(p.ditos.filter(d => d.atleta).map(d => d.atleta.nome));
+    const erros = p.ditos.filter(d => !d.atleta);
+    const tudo = motivo === 'nomes';
+    render(`
+      <div class="center" style="margin-top:10px">
+        <div class="trophy">${tudo ? '🏆' : '🎯'}</div>
+        <p class="muted" style="margin:6px 0 0">${tudo ? 'Você acertou todos!' : 'Acabaram as vidas'}</p>
+        <h1 class="logo" style="font-size:2.4rem">${falados.size} de ${p.atletas.length}</h1>
+      </div>
+      ${erros.length ? `<div class="card"><span class="label">Erros</span><p class="small" style="margin:6px 0">${erros.map(e => esc(e.texto)).join(' · ')}</p></div>` : ''}
+      ${cartaoJogo()}
+      ${p.jogo.times.map(t => `
+        <div class="card">
+          <span class="label">${esc(t.nome)}${t.tecnico ? ` · técnico ${esc(t.tecnico)}` : ''}</span>
+          ${t.jogadores.map(a => `
+            <div class="lineup-row ${falados.has(a.nome) ? 'hit' : ''}">
+              <span class="pos">${esc(a.pos)}</span><span class="grow">${esc(a.nome)}</span>${a.titular ? '' : '<span class="tag under">entrou</span>'}
+            </div>`).join('')}
+        </div>`).join('')}
+      ${p.jogo.curiosidade ? `<div class="fact">💡 ${esc(p.jogo.curiosidade)}</div>` : ''}
+      <button class="btn" id="denovo">Jogar de novo (outro jogo)</button>
+      <button class="btn secondary" id="config">Mudar jogadores / modo</button>
+      <a class="btn ghost" href="index.html">Voltar aos jogos</a>
+    `);
+    document.getElementById('denovo').onclick = () => { if (cfg.jogo !== 'sortear') { cfg.jogo = 'sortear'; salvar(); } iniciar(0); };
     document.getElementById('config').onclick = () => { p = null; telaSetup(); };
   }
 

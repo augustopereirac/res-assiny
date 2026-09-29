@@ -242,7 +242,7 @@
     if (souHost) Sala.ligarTreino(() => { H.cfg.treino = !H.cfg.treino; publicar(); });
     if (!souHost) return;
     app.querySelectorAll('[data-modo]').forEach(b => b.onclick = () => { H.cfg.modo = b.dataset.modo; publicar(); });
-    app.querySelectorAll('[data-jogo]').forEach(b => b.onclick = () => { H.cfg.jogo = b.dataset.jogo; publicar(); });
+    app.querySelectorAll('[data-jogo]').forEach(b => b.onclick = () => { H.cfg.jogo = b.dataset.jogo; publicar(); setTimeout(() => C.rolarAte(document.getElementById('comecar')), 60); });
     document.getElementById('comecar').onclick = iniciar;
   }
 
