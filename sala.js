@@ -34,7 +34,9 @@
   // Troca de anfitrião: o anfitrião manda de tempos em tempos uma cópia do estado dele (snapshot).
   // Se ele sair da sala, quem entrou primeiro depois dele vira anfitrião com essa cópia e o jogo continua.
   function conectar(o) {
-    const id = meuId();
+    let id = meuId();
+    const chaveId = `noite:id:${o.jogo}:${o.codigo}:${C.norm(o.nome || '')}`;
+    try { const salvo = localStorage.getItem(chaveId); if (salvo) { id = salvo; ss.set('noite:meuId', id); } else localStorage.setItem(chaveId, id); } catch (e) {}
     const sb = cliente();
     const ch = sb.channel(`noite-${o.jogo}-${o.codigo}`, { config: { broadcast: { self: false }, presence: { key: id } } });
     const chaveSnap = `noite:snap:${o.jogo}:${o.codigo}`;
@@ -74,8 +76,9 @@
       const ms = membros(), outrosHosts = ms.filter(m => m.id !== id && m.host);
       if (aguardando) return;
       if (ehHost) {
-        // dois anfitriões (ex.: o antigo voltou): fica quem virou anfitrião antes
-        const ganha = outrosHosts.find(m => (m.hs || 0) < hs || ((m.hs || 0) === hs && m.id < id));
+        // dois anfitriões (ex.: o antigo voltou depois de o celular bloquear): fica quem assumiu por último,
+        // porque é ele que tem o jogo mais atualizado
+        const ganha = outrosHosts.find(m => (m.hs || 0) > hs || ((m.hs || 0) === hs && m.id < id));
         if (ganha) deixarHost();
         return;
       }
@@ -88,7 +91,7 @@
         if (ms2.some(m => m.host)) return;
         const fila = ms2.filter(m => m.t).sort((a, b) => (a.t - b.t) || (a.id < b.id ? -1 : 1));
         if (fila.length && fila[0].id === id) virarHost();
-      }, 3000);
+      }, 20000); // 20 s: celular bloqueado/sem sinal por pouco tempo não troca o anfitrião
     }
 
     const api = {
@@ -162,7 +165,16 @@
       }
       if (o.onStatus) o.onStatus(status);
     });
-    global.addEventListener && global.addEventListener('pagehide', () => { try { ch.untrack(); } catch (e) {} });
+    // celular bloqueado / app em segundo plano: NÃO sai da sala. Ao voltar, reconecta e pede o estado de novo.
+    if (global.document) document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      setTimeout(() => {
+        try { if (ch.state !== 'joined' && ch.state !== 'joining') ch.subscribe(); } catch (e) {}
+        track();
+        if (!ehHost) ch.send({ type: 'broadcast', event: 'acao', payload: { de: id, nome: o.nome, tipo: 'oi', dados: {} } });
+        avaliar();
+      }, 800);
+    });
     return api;
   }
 
@@ -174,9 +186,15 @@
     : (on ? '<div class="card center"><strong>🧪 Partida de treino</strong><div class="muted small">Não conta no ranking.</div></div>' : '');
   const ligarTreino = fn => { const b = document.getElementById('treinoSala'); if (b) b.onclick = fn; };
 
+  const foraDesde = {}; let timerBarra = null;
   function barraAusentes(ativos, presentes, nome, onTirar) {
     let bar = document.getElementById('barraAusentes');
-    const aus = (ativos || []).filter(id => !presentes.some(p => p.id === id));
+    const agora = Date.now();
+    (ativos || []).forEach(id => { if (presentes.some(p => p.id === id)) delete foraDesde[id]; else if (!foraDesde[id]) foraDesde[id] = agora; });
+    // celular bloqueado por pouco tempo não conta como saída: só avisa depois de 30 s fora
+    const aus = (ativos || []).filter(id => foraDesde[id] && agora - foraDesde[id] >= 30000);
+    clearTimeout(timerBarra);
+    if ((ativos || []).some(id => foraDesde[id] && agora - foraDesde[id] < 30000)) timerBarra = setTimeout(() => barraAusentes(ativos, presentes, nome, onTirar), 5000);
     if (!aus.length) { if (bar) bar.remove(); return; }
     if (!bar) { bar = document.createElement('div'); bar.id = 'barraAusentes'; bar.className = 'barra-ausentes'; document.body.appendChild(bar); }
     bar.innerHTML = `<span>🚪 ${aus.map(id => C.esc(nome(id))).join(', ')} saiu da sala.</span><button class="btn small" id="tirarAusentes">Tirar da partida</button>`;
