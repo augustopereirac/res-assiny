@@ -90,7 +90,7 @@
     { id: 'baixo', nome: 'Time mais baixo', curto: 'Altura', desc: 'Soma das alturas. MENOR soma vence. Escolha errada vale 2,00 m.', val: j => j.h, fmt: m, maior: false, penal: 200 },
     { id: 'golsSel', nome: 'Mais gols pela seleção', curto: 'Gols pela seleção', desc: 'Soma dos gols pela seleção principal.', val: j => j.sel ? (j.selG || 0) : 0, fmt: v => C.plural(v, 'gol', 'gols'), maior: true },
     { id: 'jogosSel', nome: 'Mais jogos pela seleção', curto: 'Jogos pela seleção', desc: 'Soma dos jogos pela seleção principal.', val: j => j.sel ? (j.selJ || 0) : 0, fmt: v => C.plural(v, 'jogo', 'jogos'), maior: true },
-    { id: 'golsClubes', nome: 'Mais gols por clubes', curto: 'Gols por clubes', desc: 'Soma dos gols por clubes na carreira (sem seleção).', val: j => j.golsClubes, fmt: v => C.plural(v, 'gol', 'gols'), maior: true },
+    { id: 'golsClubes', nome: 'Mais gols por clubes', curto: 'Gols por clubes', desc: 'Soma dos gols por clubes na carreira, em todas as competições (sem seleção).', val: j => j.golsClubes, fmt: v => C.plural(v, 'gol', 'gols'), maior: true },
     { id: 'clubes', nome: 'Mais rodados', curto: 'Clubes na carreira', desc: 'Soma de quantos clubes cada um defendeu.', val: j => j.nClubes, fmt: v => C.plural(v, 'clube', 'clubes'), maior: true },
     { id: 'velho', nome: 'Time mais velho', curto: 'Ano de nascimento', desc: 'Soma dos anos de nascimento. MENOR soma (mais velhos) vence. Escolha errada vale 2010.', val: j => j.ano, fmt: v => String(v), maior: false, penal: 2010 }
   ];
