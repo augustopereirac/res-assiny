@@ -45,8 +45,8 @@
     p = { rodada: 0, usados: [], placar: Object.fromEntries(cfg.jogadores.map(j => [j, 0])), hist: [] };
     novaRodada();
   }
-  function novaRodada() {
-    p.rodada++;
+  function novaRodada(trocar) {
+    if (!trocar) p.rodada++;
     p.alvo = sortear(); p.passo = 1; p.acertou = {}; p.chutes = [];
     const n = cfg.jogadores.length, ini = (p.rodada - 1) % n;
     p.ordem = cfg.jogadores.slice(ini).concat(cfg.jogadores.slice(0, ini));
@@ -54,6 +54,15 @@
     proximoChute();
   }
 
+  // troca o jogador da rodada sem avançar (ex.: já jogaram com ele); desfaz os pontos ganhos nele
+  function trocarJogador() {
+    if (!confirm('Trocar o jogador desta rodada? Os pontos ganhos nele são desfeitos.')) return;
+    Object.entries(p.acertou).forEach(([n, ps]) => { p.placar[n] -= N() - ps + 1; });
+    toast('🔄 Jogador trocado.');
+    novaRodada(true);
+  }
+  const btnTrocar = '<button class="btn ghost" id="trocarJog">🔄 Já jogamos com ele? Trocar jogador</button>';
+  const ligarTrocar = () => { const b = document.getElementById('trocarJog'); if (b) b.onclick = trocarJogador; };
   const N = () => p.alvo.car.length;
   const pend = () => p.ordem.filter(j => !p.acertou[j]);
   const cab = () => `<div class="topbar"><span class="pill">Rodada ${p.rodada}/${cfg.rodadas} · clube ${p.passo}/${N()}</span><button class="link-back" id="sair">Sair</button></div>`;
@@ -82,8 +91,10 @@
         ${F.htmlBusca('busca')}
         <button class="btn" id="chutar" disabled>Chutar</button>
         <button class="btn ghost" id="passar">Passar (esperar mais um clube)</button></div>
+      ${btnTrocar}
       <div class="card"><span class="label">Placar</span>${placar(true)}</div>`);
     ligarSair();
+    ligarTrocar();
     const bt = document.getElementById('chutar');
     F.ligarBusca('busca', j => { escolhido = j; bt.disabled = !j; });
     bt.onclick = () => {

@@ -17,7 +17,7 @@
     render('<div class="pass"><div class="emoji">📡</div><p class="muted">Conectando…</p></div>');
     sala = Sala.conectar({
       jogo: JOGO, codigo, nome, host: souHost,
-      onEstado: e => { estado = e; desenhar(); },
+      onEstado: e => { if (estado && estado.fase === 'jogo' && e.fase === 'jogo' && e.rid !== estado.rid && e.rodada === estado.rodada && e.aviso) toast('🔄 ' + e.aviso); estado = e; desenhar(); },
       onPrivado: d => { if (d && d.aviso) toast(d.aviso); if (d && d.chute) { meuChute = d.chute; if (!meusChutes.some(x => x.rodada === d.chute.rodada && x.passo === d.chute.passo)) meusChutes.push(d.chute); desenhar(); } },
       onAcao: acaoHost, snapshot: () => H,
       onVirarHost: h => { if (h) Sala.salvarHost(JOGO, codigo, h); souHost = true; iniciarH(); app.innerHTML = ''; toast('👑 O anfitrião saiu. Agora você é o anfitrião da sala.'); publicar(); },
@@ -36,7 +36,7 @@
     const placar = { ...(H.placar || {}) };
     if (!fim && a) Object.entries(H.acertou || {}).forEach(([id, p]) => { if (!fechado(p)) placar[id] -= a.car.length - p + 1; });
     return {
-      fase: H.fase, cfg: H.cfg, rodada: H.rodada, jogadores: H.jogadores || [], placar,
+      fase: H.fase, cfg: H.cfg, rodada: H.rodada, rid: H.rid || 0, aviso: H.aviso || '', jogadores: H.jogadores || [], placar,
       passo: H.passo, N: a ? a.car.length : 0,
       clubes: a ? a.car.slice(0, fim ? a.car.length : H.passo).map(c => ({ nome: c.nome, anos: F.anos(c) })) : [],
       acertou: Object.fromEntries(Object.entries(H.acertou || {}).filter(([, p]) => fechado(p))), responderam: Object.fromEntries(Object.keys(H.resp || {}).map(k => [k, true])),
@@ -52,8 +52,9 @@
     H.jogadores = js; H.rkId = null; H.placar = Object.fromEntries(js.map(j => [j.id, 0])); H.tb = Object.fromEntries(js.map(j => [j.id, [0, 0]])); H.rodada = 0; H.usados = [];
     novaRodada();
   }
-  function novaRodada() {
-    H.rodada++;
+  function novaRodada(trocar) {
+    if (!trocar) H.rodada++;
+    H.rid = (H.rid || 0) + 1;
     let pool = F.poolCarreira(H.cfg.pool).filter(j => !H.vistos.includes(j.id) && !H.usados.includes(j.id));
     if (!pool.length) { H.vistos = []; pool = F.poolCarreira(H.cfg.pool).filter(j => !H.usados.includes(j.id)); }
     const j = pool[Math.floor(Math.random() * pool.length)];
@@ -61,8 +62,17 @@
     H.passo = 1; H.acertou = {}; H.resp = {}; H.chutes = []; H.fase = 'jogo';
     publicar();
   }
+  // troca o jogador da rodada (ex.: já jogaram com ele). Desfaz os pontos ganhos nele.
+  function trocarJogador(quem) {
+    const N = alvo().car.length;
+    Object.entries(H.acertou || {}).forEach(([id, p]) => { H.placar[id] -= N - p + 1; const t = (H.tb || {})[id]; if (t) { t[0]--; t[1] += p; } });
+    H.aviso = `${(H.jogadores.find(j => j.id === quem) || {}).nome || 'Alguém'} trocou o jogador.`;
+    toast('🔄 ' + H.aviso);
+    novaRodada(true);
+  }
   const pendentes = () => H.jogadores.filter(j => !H.acertou[j.id]);
   function acaoHost(msg) {
+    if (msg.tipo === 'trocarJogador' && H.fase === 'jogo' && H.jogadores.some(j => j.id === msg.de) && msg.dados && msg.dados.rid === H.rid) return trocarJogador(msg.de);
     if (H.fase !== 'jogo' || !H.jogadores.some(j => j.id === msg.de) || H.acertou[msg.de] || H.resp[msg.de]) return;
     const N = alvo().car.length;
     if (msg.tipo === 'chute') {
@@ -71,7 +81,7 @@
       H.chutes.push({ quem: msg.de, passo: H.passo, nome: j.nome, ok });
       H.resp[msg.de] = true;
       if (ok) { H.acertou[msg.de] = H.passo; H.placar[msg.de] += N - H.passo + 1; H.tb = H.tb || {}; const t = H.tb[msg.de] = H.tb[msg.de] || [0, 0]; t[0]++; t[1] -= H.passo; }
-      sala.privado(msg.de, { chute: { rodada: H.rodada, passo: H.passo, ok, nome: j.nome }, t: Date.now() });
+      sala.privado(msg.de, { chute: { rodada: H.rid, passo: H.passo, ok, nome: j.nome }, t: Date.now() });
     } else if (msg.tipo === 'passar') { H.chutes.push({ quem: msg.de, passo: H.passo, passou: true }); H.resp[msg.de] = true; }
     else return;
     checar();
@@ -115,15 +125,15 @@
 
   function telaJogo() {
     const eu = estado.jogadores.some(j => j.id === sala.id);
-    const meu = meuChute && meuChute.rodada === estado.rodada ? meuChute : null;
+    const meu = meuChute && meuChute.rodada === estado.rid ? meuChute : null;
     const acertei = estado.acertou[sala.id] || (meu && meu.ok ? meu.passo : null), respondi = estado.responderam[sala.id];
     const errei = !acertei && respondi && meu && meu.passo === estado.passo && !meu.ok ? meu.nome : null;
     const doPasso = estado.chutes;
-    if (document.getElementById('busca') && eu && !acertei && !respondi && document.getElementById('passoAtual')?.dataset.p == estado.rodada + '-' + estado.passo) {
+    if (document.getElementById('busca') && eu && !acertei && !respondi && document.getElementById('passoAtual')?.dataset.p == estado.rid + '-' + estado.passo) {
       const st = document.getElementById('statusBox'); if (st) st.innerHTML = statusHtml(doPasso);
       const hb = document.getElementById('histBox'); if (hb) hb.innerHTML = hist(); return;
     }
-    render(`${topo(`Rodada ${estado.rodada}/${estado.cfg.rodadas} · clube ${estado.passo}/${estado.N}`)}<span id="passoAtual" data-p="${estado.rodada}-${estado.passo}"></span>
+    render(`${topo(`Rodada ${estado.rodada}/${estado.cfg.rodadas} · clube ${estado.passo}/${estado.N}`)}<span id="passoAtual" data-p="${estado.rid}-${estado.passo}"></span>
       <div class="card"><span class="label">A carreira</span>${lista(false)}</div>
       <div id="histBox">${hist()}</div>
       ${!eu ? '<p class="muted center">Você está assistindo.</p>' : acertei ? `<div class="card center">✅ Você acertou no ${acertei}º clube! Aguardando os outros…</div>` : respondi ? `<div class="card center muted">${errei ? `❌ Não é ${esc(errei)}. ` : ''}Aguardando os outros…</div>` : `
@@ -131,8 +141,10 @@
           ${F.htmlBusca('busca')}<button class="btn" id="chutar" disabled>Chutar</button><button class="btn ghost" id="passar">Passar (esperar mais um clube)</button></div>`}
       <div id="statusBox">${statusHtml(doPasso)}</div>
       ${souHost ? '<button class="btn ghost" id="forcar">Mostrar próximo clube agora</button>' : ''}
+      ${eu ? '<button class="btn ghost" id="trocarJog">🔄 Já jogamos com ele? Trocar jogador</button>' : ''}
       <div class="card"><span class="label">Placar</span>${placar()}</div>`);
     const f = document.getElementById('forcar'); if (f) f.onclick = forcarProximo;
+    const tj = document.getElementById('trocarJog'); if (tj) tj.onclick = () => { if (confirm('Trocar o jogador desta rodada? Os pontos ganhos nele são desfeitos.')) sala.enviar('trocarJogador', { rid: estado.rid }); };
     if (!eu || acertei || respondi) return;
     let esc_ = null; const bt = document.getElementById('chutar');
     F.ligarBusca('busca', j => { esc_ = j; bt.disabled = !j; });
@@ -146,7 +158,7 @@
 `;
   // histórico: clubes já fechados (de todos) + meu chute no clube aberto (só eu vejo)
   const hist = () => {
-    const meus = meusChutes.filter(c => c.rodada === estado.rodada && c.passo === estado.passo && estado.fase === 'jogo').map(c => ({ quem: sala.id, passo: c.passo, ok: c.ok, nome: c.nome, meu: true }));
+    const meus = meusChutes.filter(c => c.rodada === estado.rid && c.passo === estado.passo && estado.fase === 'jogo').map(c => ({ quem: sala.id, passo: c.passo, ok: c.ok, nome: c.nome, meu: true }));
     return F.htmlHistChutes([...estado.chutes, ...meus], nomeDe);
   };
 
