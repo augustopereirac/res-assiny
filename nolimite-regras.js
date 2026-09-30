@@ -8,12 +8,15 @@
 (function (global) {
   function pontuarRodada(resposta, palpites) {
     // palpites: [{ jogador: "Augusto", valor: 205 }, ...]
-    const cravaram = palpites.filter(p => p.valor === resposta);
-    const abaixo = palpites.filter(p => p.valor < resposta);
+    // valor null = acabou o tempo sem palpite (não pontua, não conta como mais perto)
+    const validos = palpites.filter(p => p.valor != null);
+    const cravaram = validos.filter(p => p.valor === resposta);
+    const abaixo = validos.filter(p => p.valor < resposta);
     const melhor = abaixo.length ? Math.max(...abaixo.map(p => p.valor)) : null;
 
     return palpites.map(p => {
       let status, pontos = 0;
+      if (p.valor == null) return { jogador: p.jogador, valor: null, status: 'tempo', pontos: 0, distancia: Infinity };
       if (p.valor === resposta) {
         status = 'exact'; pontos = 2;
       } else if (p.valor > resposta) {

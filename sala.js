@@ -186,6 +186,28 @@
     : (on ? '<div class="card center"><strong>🧪 Partida de treino</strong><div class="muted small">Não conta no ranking.</div></div>' : '');
   const ligarTreino = fn => { const b = document.getElementById('treinoSala'); if (b) b.onclick = fn; };
 
+  // ---------- timer de 1 minuto (vários celulares) ----------
+  // O anfitrião guarda H.prazo (horário limite) e H.prazoKey (qual jogada). Todos mostram a contagem;
+  // quando zera, o anfitrião executa onExpira(key).
+  const htmlTimer = (on, host) => host
+    ? `<div class="card">${C.htmlTimerBtn(on, 'timerSala')}<p class="muted small" style="margin:6px 0 0">Quem não jogar em 1 minuto perde a vez (conta como passe/erro).</p></div>`
+    : (on ? '<p class="muted small center">⏱️ Timer de 1 minuto por jogada ligado.</p>' : '');
+  const ligarTimer = fn => { const b = document.getElementById('timerSala'); if (b) b.onclick = fn; };
+  function relogio(getH, onExpira, folga) {
+    let t = null;
+    return {
+      novo(key, mult) { const H = getH(); if (!H) return; if (H.cfg && H.cfg.timer === false) { H.prazo = null; return; } H.prazo = Date.now() + C.TEMPO * (mult || 1); H.prazoKey = String(key); },
+      limpar() { const H = getH(); if (H) H.prazo = null; },
+      armar() {
+        clearTimeout(t); const H = getH(); if (!H || !H.prazo) return;
+        const k = H.prazoKey;
+        t = setTimeout(() => { const H2 = getH(); if (H2 && H2.prazo && H2.prazoKey === k) { H2.prazo = null; onExpira(k); } }, Math.max(0, H.prazo - Date.now()) + (folga || 400));
+      },
+      parar() { clearTimeout(t); }
+    };
+  }
+  const mostrarPrazo = prazo => { if (prazo) C.contagem(prazo); else C.pararContagem(); };
+
   const foraDesde = {}; let timerBarra = null;
   function barraAusentes(ativos, presentes, nome, onTirar) {
     let bar = document.getElementById('barraAusentes');
@@ -296,5 +318,5 @@
   const carregarHost = (jogo, codigo) => { try { return JSON.parse(localStorage.getItem(`noite:host:${jogo}:${codigo}`) || 'null'); } catch (e) { return null; } };
   const souHostDe = jogo => ss.get(`noite:souHost:${jogo}`);
 
-  global.Sala = { conectar, barraAusentes, htmlTreino, ligarTreino, telaEntrada, htmlCodigo, ligarCodigo, htmlJogadores, gerarCodigo, meuId, salvarHost, carregarHost, souHostDe, linkSala };
+  global.Sala = { conectar, barraAusentes, htmlTreino, ligarTreino, htmlTimer, ligarTimer, relogio, mostrarPrazo, telaEntrada, htmlCodigo, ligarCodigo, htmlJogadores, gerarCodigo, meuId, salvarHost, carregarHost, souHostDe, linkSala };
 })(window);

@@ -5,7 +5,7 @@
   const C = window.Comum, F = window.Futebol;
   const { esc, store } = C;
   const app = document.getElementById('app');
-  const render = html => { app.innerHTML = html; window.scrollTo(0, 0); };
+  const render = html => { C.pararContagem(); app.innerHTML = html; window.scrollTo(0, 0); };
 
   const cfg = { jogadores: C.carregarJogadores(), pool: store.get('ord:pool', 'famosos'), rodadas: store.get('ord:rodadas', 5) };
   const salvar = () => { store.set('ord:pool', cfg.pool); store.set('ord:rodadas', cfg.rodadas); };
@@ -72,6 +72,14 @@
 
   function telaOrdenar(nome) {
     const ordem = [];
+    const prazo = C.timerLigado() ? Date.now() + C.TEMPO : null;
+    const confirmar = () => {
+      p.respostas[nome] = ordem.map(k => p.embaralhado[k].n);
+      p.vez++;
+      if (p.vez < cfg.jogadores.length) telaPasse(); else revelar();
+    };
+    // acabou o tempo: o que faltar entra na ordem em que está na tela
+    const esgotou = () => { p.embaralhado.forEach((x, k) => { if (!ordem.includes(k)) ordem.push(k); }); C.toast('⏱️ Acabou o tempo de ' + nome + '. Valeu a ordem que estava.'); confirmar(); };
     const desenhar = () => {
       render(`${cab()}${cartao()}
         <div class="card"><span class="label">${esc(nome)}, toque nos clubes na ordem (do primeiro ao último)</span>
@@ -84,11 +92,8 @@
       app.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { ordem.push(+b.dataset.k); desenhar(); });
       document.getElementById('desfazer').onclick = () => { ordem.pop(); desenhar(); };
       document.getElementById('limpar').onclick = () => { ordem.length = 0; desenhar(); };
-      document.getElementById('ok').onclick = () => {
-        p.respostas[nome] = ordem.map(k => p.embaralhado[k].n);
-        p.vez++;
-        if (p.vez < cfg.jogadores.length) telaPasse(); else revelar();
-      };
+      document.getElementById('ok').onclick = confirmar;
+      if (prazo) C.contagem(prazo, esgotou);
     };
     desenhar();
   }

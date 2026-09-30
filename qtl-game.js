@@ -18,7 +18,7 @@
   let vistos = new Set(store.get('qtl:vistos', []));
 
   let p = null; // partida
-  const render = html => { app.innerHTML = html; window.scrollTo(0, 0); };
+  const render = html => { C.pararContagem(); app.innerHTML = html; window.scrollTo(0, 0); };
   const fmtData = d => { const [a, m, dd] = d.split('-'); return `${dd}/${m}/${a}`; };
   const POS = { GOL: 'Goleiro', ZAG: 'Zagueiro', LAT: 'Lateral', VOL: 'Volante', MEI: 'Meia', ATA: 'Atacante' };
 
@@ -221,6 +221,7 @@
     const inp = document.getElementById('nome');
     inp.focus();
     document.getElementById('f').onsubmit = e => { e.preventDefault(); falar(nome, inp.value.trim()); };
+    if (C.timerLigado()) C.contagem(Date.now() + C.TEMPO, () => { toast('⏱️ Acabou o tempo de ' + nome + '.'); resolverErrado(nome, '', true); });
   }
 
   function jaDito(texto, atleta) {
@@ -315,18 +316,19 @@
     proximaVez({ tipo: 'exact', html: `✅ ${esc(nome)} acertou: ${descAtleta(atleta)}` });
   }
 
-  function resolverErrado(nome, texto) {
-    p.ditos.push({ jogador: nome, texto, atleta: null, status: 'errou' });
+  function resolverErrado(nome, texto, tempo) {
+    const tit = tempo ? '⏱️ Acabou o tempo' : `${texto} não estava`;
+    p.ditos.push({ jogador: nome, texto: tempo ? '(sem resposta)' : texto, atleta: null, status: 'errou' });
     if (p.solo) {
       p.vidas--;
-      if (p.vidas > 0) return telaRevelacao({ ok: false, titulo: `${texto} não estava`, sub: `Você perdeu uma vida. Restam ${C.plural(p.vidas, 'vida', 'vidas')}.` });
+      if (p.vidas > 0) return telaRevelacao({ ok: false, titulo: tit, sub: `Você perdeu uma vida. Restam ${C.plural(p.vidas, 'vida', 'vidas')}.` });
       p.vivos.delete(nome);
-      return telaRevelacao({ ok: false, titulo: `${texto} não estava`, sub: 'Acabaram as suas vidas.' });
+      return telaRevelacao({ ok: false, titulo: tit, sub: 'Acabaram as suas vidas.' });
     }
     p.vivos.delete(nome);
-    p.log.push(`${nome} saiu ao falar “${texto}”, que não estava no jogo.`);
+    p.log.push(tempo ? `${nome} saiu porque o tempo acabou.` : `${nome} saiu ao falar “${texto}”, que não estava no jogo.`);
     avancarPonteiro();
-    telaRevelacao({ ok: false, titulo: `${texto} não estava`, sub: `${nome} está eliminado.` });
+    telaRevelacao({ ok: false, titulo: tit, sub: `${nome} está eliminado.` });
   }
 
   function resolverDuvida(nome, texto, atleta, quem, estava) {

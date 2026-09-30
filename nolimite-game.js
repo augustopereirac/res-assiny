@@ -58,7 +58,7 @@
   }
 
   // ---------- telas ----------
-  function render(html) { app.innerHTML = html; window.scrollTo(0, 0); }
+  function render(html) { C.pararContagem(); app.innerHTML = html; window.scrollTo(0, 0); }
 
   function telaSetup() {
     const podeComecar = cfg.jogadores.length >= 1 && cfg.temas.length > 0;
@@ -88,7 +88,7 @@
           <button class="btn small" type="submit">Adicionar</button>
         </form>
         <div id="cadChips">${window.Ranking ? Ranking.htmlChips(cfg.jogadores, 'data-cad') : ''}</div>
-        ${window.Ranking ? `<div style="margin-top:12px">${Ranking.htmlTreino()}</div>` : ''}
+        ${window.Ranking ? `<div style="margin-top:12px">${Ranking.htmlTreino()}</div>` : ''}<div style="margin-top:10px">${C.htmlTimerBtn(C.timerLigado())}</div>
       </div>
 
       <div class="card">
@@ -124,6 +124,7 @@
       document.getElementById('novoNome').focus();
     };
     if (window.Ranking) Ranking.ligarTreino(telaSetup);
+    C.ligarTimerBtn(() => { C.setTimer(!C.timerLigado()); telaSetup(); });
     const ligarChips = () => app.querySelectorAll('[data-cad]').forEach(b => b.onclick = () => { const n = b.dataset.cad; if (!cfg.jogadores.some(j => j.toLowerCase() === n.toLowerCase())) { cfg.jogadores.push(n); salvarCfg(); telaSetup(); } });
     ligarChips();
     if (window.Ranking) Ranking.atualizar().then(() => { const box = document.getElementById('cadChips'); if (box) { box.innerHTML = Ranking.htmlChips(cfg.jogadores, 'data-cad'); ligarChips(); } });
@@ -222,6 +223,7 @@
 
   function telaPalpite() {
     const nome = jogo.ordem[jogo.vez];
+    const proximo = () => { C.pararContagem(); jogo.vez++; if (jogo.vez < jogo.ordem.length) telaPasse(); else telaTodos(); };
     const q = jogo.pergunta;
     render(`
       ${cabecalho()}
@@ -247,9 +249,9 @@
       const dig = inp.value.replace(/\D/g, '');
       if (!dig) return;
       jogo.palpites[nome] = Number(dig);
-      jogo.vez++;
-      if (jogo.vez < jogo.ordem.length) telaPasse(); else telaTodos();
+      proximo();
     };
+    if (C.timerLigado()) C.contagem(Date.now() + C.TEMPO, () => { jogo.palpites[nome] = null; toast('⏱️ Acabou o tempo de ' + nome + '. Ficou sem palpite.'); proximo(); });
   }
 
   function telaTodos() {
@@ -272,9 +274,9 @@
     res.forEach(r => jogo.placar[r.jogador] += r.pontos);
     jogo.historico.push({ pergunta: q, resultados: res });
 
-    const ordemStatus = { exact: 0, close: 1, under: 2, bust: 3 };
+    const ordemStatus = { exact: 0, close: 1, under: 2, bust: 3, tempo: 4 };
     const lista = res.slice().sort((a, b) => ordemStatus[a.status] - ordemStatus[b.status] || a.distancia - b.distancia);
-    const tagTxt = { exact: '🎯 CRAVOU', close: '✅ MAIS PERTO', under: 'abaixo', bust: '💥 ESTOUROU' };
+    const tagTxt = { exact: '🎯 CRAVOU', close: '✅ MAIS PERTO', under: 'abaixo', bust: '💥 ESTOUROU', tempo: '⏱️ SEM TEMPO' };
     const ninguem = res.every(r => r.pontos === 0);
     const ultima = jogo.rodada >= jogo.total;
 
@@ -294,10 +296,10 @@
         ${lista.map((r, idx) => `
           <div class="result ${r.status}" style="animation-delay:${idx * 0.12}s">
             <span class="who">${esc(r.jogador)}<br><span class="tag ${r.status}">${tagTxt[r.status]}</span></span>
-            <span class="val">${fmt(r.valor)}</span>
+            <span class="val">${r.valor == null ? '—' : fmt(r.valor)}</span>
             <span class="pts">${r.pontos ? '+' + r.pontos : '0'}</span>
           </div>`).join('')}
-        ${ninguem ? '<p class="muted small center" style="margin:8px 0 0">Todo mundo estourou. Ninguém pontua nesta rodada.</p>' : ''}
+        ${ninguem ? '<p class="muted small center" style="margin:8px 0 0">Ninguém ficou abaixo da resposta. Ninguém pontua nesta rodada.</p>' : ''}
       </div>
 
       <div class="card">

@@ -6,7 +6,7 @@
   const C = window.Comum, F = window.Futebol;
   const { esc, store, toast } = C;
   const app = document.getElementById('app');
-  const render = html => { app.innerHTML = html; window.scrollTo(0, 0); };
+  const render = html => { C.pararContagem(); app.innerHTML = html; window.scrollTo(0, 0); };
 
   const cfg = {
     jogadores: C.carregarJogadores(),
@@ -135,11 +135,15 @@
       btns.querySelectorAll('[data-slot]').forEach(b => { if (b.dataset.slot === slot) b.classList.add('on'); b.onclick = () => { slot = b.dataset.slot; btns.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === b)); atualizar(); }; });
       atualizar();
     });
-    confirmar.onclick = () => {
-      p.escolhas[nome] = { id: escolhido.id, slot };
-      p.vez++;
-      if (p.vez < p.ordem.length) telaPasse(); else revelar();
-    };
+    const seguir = () => { p.vez++; if (p.vez < p.ordem.length) telaPasse(); else revelar(); };
+    confirmar.onclick = () => { p.escolhas[nome] = { id: escolhido.id, slot }; seguir(); };
+    if (C.timerLigado()) C.contagem(Date.now() + C.TEMPO, () => {
+      const oc = cfg.jogadores.flatMap(n => [...Object.values(p.times[n]).filter(Boolean).map(s => s.id), ...(p.escolhas[n] ? [p.escolhas[n].id] : [])]);
+      const a = F.sortearAuto(p.tema, p.crit, vazios, oc);
+      if (a) { p.escolhas[nome] = { id: a.id, slot: a.slot }; toast(`⏱️ Acabou o tempo de ${nome}. Sorteei ${a.nome}.`); }
+      else { const s = vazios[0]; const j = F.J.find(x => F.encaixa(x, s.g)); p.escolhas[nome] = { id: j.id, slot: s.k }; }
+      seguir();
+    });
   }
 
   function revelar() {

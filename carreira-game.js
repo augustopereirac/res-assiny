@@ -5,7 +5,7 @@
   const C = window.Comum, F = window.Futebol;
   const { esc, store, toast } = C;
   const app = document.getElementById('app');
-  const render = html => { app.innerHTML = html; window.scrollTo(0, 0); };
+  const render = html => { C.pararContagem(); app.innerHTML = html; window.scrollTo(0, 0); };
 
   const cfg = { jogadores: C.carregarJogadores(), pool: store.get('car:pool', 'famosos'), rodadas: store.get('car:rodadas', 5) };
   const salvar = () => { store.set('car:pool', cfg.pool); store.set('car:rodadas', cfg.rodadas); };
@@ -106,6 +106,7 @@
       telaResultado(nome, ok ? `✅ Acertou! +${pts} pts` : `❌ Não é ${esc(escolhido.nome)}.`);
     };
     document.getElementById('passar').onclick = () => { p.chutes.push({ quem: nome, passo: p.passo, passou: true }); p.vez++; telaResultado(nome, 'Você passou.'); };
+    if (C.timerLigado()) C.contagem(Date.now() + C.TEMPO, () => { p.chutes.push({ quem: nome, passo: p.passo, passou: true }); p.vez++; telaResultado(nome, '⏱️ Acabou o tempo. Você passou.'); });
   }
 
   // resultado só para quem chutou; depois passa o celular (sem entregar nada ao próximo)

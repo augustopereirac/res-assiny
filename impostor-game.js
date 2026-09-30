@@ -25,7 +25,7 @@
   const placar = {}; // placar da noite (não salvo)
 
   let p = null;
-  const render = html => { app.innerHTML = html; window.scrollTo(0, 0); };
+  const render = html => { C.pararContagem(); app.innerHTML = html; window.scrollTo(0, 0); };
   const maxImp = () => Math.max(1, Math.floor((cfg.jogadores.length - 1) / 2));
 
   function catsAtivas() {
@@ -214,6 +214,8 @@
       if (p.rodadaFala < p.rodadasAlvo) { p.rodadaFala++; telaFalas(); }
       else iniciarVotacao();
     };
+    // 1 minuto por jogador para a rodada de pistas
+    if (C.timerLigado()) C.contagem(Date.now() + C.TEMPO * ordem.length, () => { toast('⏱️ Acabou o tempo das pistas.'); document.getElementById('fim').click(); });
   }
 
   function salvarPistas() {
@@ -270,11 +272,9 @@
       ${opcoesVoto(nome).map(j => `<button class="btn secondary" data-voto="${esc(j)}">${esc(j)}</button>`).join('')}
     `);
     ligarSair();
-    app.querySelectorAll('[data-voto]').forEach(b => b.onclick = () => {
-      p.votos[nome] = b.dataset.voto;
-      p.eleitorIdx++;
-      if (p.eleitorIdx < eleitores().length) telaPasseVoto(); else apurar();
-    });
+    const votar = v => { p.votos[nome] = v; p.eleitorIdx++; if (p.eleitorIdx < eleitores().length) telaPasseVoto(); else apurar(); };
+    app.querySelectorAll('[data-voto]').forEach(b => b.onclick = () => votar(b.dataset.voto));
+    if (C.timerLigado()) C.contagem(Date.now() + C.TEMPO, () => { toast('⏱️ Acabou o tempo de ' + nome + '. Voto em branco.'); votar(null); });
   }
 
   function telaVotoAberto() {
@@ -294,7 +294,8 @@
 
   function apurar() {
     const cont = {};
-    Object.values(p.votos).forEach(v => cont[v] = (cont[v] || 0) + 1);
+    Object.values(p.votos).forEach(v => { if (v) cont[v] = (cont[v] || 0) + 1; });
+    if (!Object.keys(cont).length) return fimImpostores('Ninguém votou a tempo: o impostor escapou.');
     const max = Math.max(...Object.values(cont));
     const top = Object.keys(cont).filter(k => cont[k] === max);
     if (top.length > 1) return telaApuracao(cont, null, () => fimImpostores('Deu empate na votação: ninguém foi pego.'));

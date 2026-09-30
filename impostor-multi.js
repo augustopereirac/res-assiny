@@ -32,7 +32,7 @@
       onPrivado: d => { carta = d; desenhar(); },
       onAcao: acaoHost, snapshot: () => H,
       onVirarHost: h => { if (h) Sala.salvarHost(JOGO, codigo, h); souHost = true; iniciarH(); app.innerHTML = ''; toast('👑 O anfitrião saiu. Agora você é o anfitrião da sala.'); publicar(); reenviarCartas(); },
-      onDeixarHost: () => { souHost = false; const b = document.getElementById('barraAusentes'); if (b) b.remove(); },
+      onDeixarHost: () => { souHost = false; rel.parar(); const b = document.getElementById('barraAusentes'); if (b) b.remove(); },
       onPresenca: lista => { presentes = lista; if (souHost) publicar(); else desenhar(); },
       onStatus: st => { if (st === 'SUBSCRIBED') { if (souHost) { publicar(); reenviarCartas(); } else if (!estado) desenhar(); } if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') toast('Problema de conexão. Tentando de novo…'); }
     });
@@ -43,6 +43,7 @@
   function publico() {
     const fim = H.fase === 'fim';
     return {
+      prazo: (H.fase !== 'lobby' && H.fase !== 'final' && H.prazo) || null,
       fase: H.fase, partida: H.partida, cfg: H.cfg, jogadores: H.jogadores, placar: H.placar,
       vivos: H.vivos || [], ordem: H.ordem || [], rodadaFala: H.rodadaFala, rodadasAlvo: H.rodadasAlvo,
       pegos: H.pegos || [], votacaoId: H.votacaoId || 0,
@@ -53,7 +54,15 @@
       fim: fim ? H.fim : null
     };
   }
-  function publicar() { Sala.salvarHost(JOGO, sala.codigo, H); sala.publicar(publico()); Sala.barraAusentes(['cartas', 'pistas', 'votacao'].includes(H.fase) ? H.vivos || [] : [], presentes, nomeId, tirar); }
+  const rel = Sala.relogio(() => H, k => expirar(k));
+  function ajustarPrazo() {
+    const k = H.fase === 'pistas' ? ['p', H.partida, H.nPistas || 0, H.rodadaFala].join('-') : H.fase === 'votacao' ? ['v', H.partida, H.votacaoId].join('-') : null;
+    if (!k) { rel.limpar(); return; }
+    if (H.prazoKey !== k || !H.prazo) rel.novo(k);
+  }
+  // acabou o minuto: pistas → próxima rodada; votação → apura com os votos que chegaram
+  function expirar() { if (H.fase === 'pistas') proximaRodadaPistas(); else if (H.fase === 'votacao') apurar(); }
+  function publicar() { if (souHost) ajustarPrazo(); Sala.salvarHost(JOGO, sala.codigo, H); sala.publicar(publico()); if (souHost) rel.armar(); Sala.barraAusentes(['cartas', 'pistas', 'votacao'].includes(H.fase) ? H.vivos || [] : [], presentes, nomeId, tirar); }
   function reenviarCartas() { if (H && H.cartas) Object.entries(H.cartas).forEach(([id, c]) => sala.privado(id, c)); }
 
   function acaoHost(msg) {
@@ -129,6 +138,7 @@
   function apurar() {
     const cont = {};
     Object.values(H.votos).forEach(v => cont[v] = (cont[v] || 0) + 1);
+    if (!Object.keys(cont).length) { H.apuracao = { cont: [], votos: [], acusado: null, era: null, empate: true }; H.fase = 'apuracao'; return fim(false, 'Ninguém votou a tempo: o impostor escapou.'); }
     const max = Math.max(...Object.values(cont));
     const top = Object.keys(cont).filter(k => cont[k] === max);
     const acusado = top.length === 1 ? top[0] : null;
@@ -170,6 +180,7 @@
   const vivo = () => estado && estado.vivos.includes(sala.id);
 
   function desenhar() {
+    Sala.mostrarPrazo(estado && estado.prazo);
     const antes = document.getElementById('pista');
     const valor = antes ? antes.value : null, foco = antes && document.activeElement === antes;
     desenhar0();
@@ -189,7 +200,7 @@
     render(`
       ${topo('Impostor')}
       ${Sala.htmlCodigo(sala.codigo)}
-      ${Sala.htmlJogadores(presentes, sala.id)}${Sala.htmlTreino(!!(estado.cfg && estado.cfg.treino), souHost)}
+      ${Sala.htmlJogadores(presentes, sala.id)}${Sala.htmlTreino(!!(estado.cfg && estado.cfg.treino), souHost)}${Sala.htmlTimer(!(estado.cfg && estado.cfg.timer === false), souHost)}
       ${Object.keys(estado.placar || {}).length ? `<div class="card"><span class="label">Placar da noite</span>${tabelaPlacar()}</div>` : ''}
       ${souHost ? `
         <div class="card">
@@ -215,6 +226,7 @@
     `);
     Sala.ligarCodigo(sala.codigo);
     if (souHost) Sala.ligarTreino(() => { H.cfg.treino = !H.cfg.treino; publicar(); });
+    if (souHost) Sala.ligarTimer(() => { H.cfg.timer = H.cfg.timer === false; publicar(); });
     if (!souHost) return;
     app.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { H.cfg[b.dataset.k] = b.dataset.v; publicar(); });
     app.querySelectorAll('[data-grupo]').forEach(b => b.onclick = () => { H.cfg.grupo = b.dataset.grupo; H.cfg.cats = CATS(H.cfg.grupo); publicar(); });

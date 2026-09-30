@@ -124,6 +124,7 @@
       </form>
       <div id="cadChips">${global.Ranking ? global.Ranking.htmlChips(jogadores, 'data-cad') : ''}</div>
       ${global.Ranking ? `<div style="margin-top:12px">${global.Ranking.htmlTreino()}</div>` : ''}
+      <div style="margin-top:10px">${C.htmlTimerBtn(C.timerLigado())}</div>
     </div>`;
 
   C.ligarEditorJogadores = (root, jogadores, aoMudar) => {
@@ -138,6 +139,7 @@
       jogadores.push(nome); salvar(true);
     };
     if (global.Ranking) global.Ranking.ligarTreino(aoMudar);
+    C.ligarTimerBtn(() => { C.setTimer(!C.timerLigado()); aoMudar(); });
     const ligarChips = () => root.querySelectorAll('[data-cad]').forEach(b => b.onclick = () => { const n = b.dataset.cad; if (!jogadores.some(j => j.toLowerCase() === n.toLowerCase())) { jogadores.push(n); salvar(); } });
     ligarChips();
     if (global.Ranking) global.Ranking.atualizar().then(() => { const box = root.querySelector('#cadChips'); if (box) { box.innerHTML = global.Ranking.htmlChips(jogadores, 'data-cad'); ligarChips(); } });
@@ -172,6 +174,30 @@
     return { rank: l.map(x => [x.nome, x.pts]), ordem: l, camp: vivos.map(x => x.nome), motivo };
   };
   C.htmlDesempate = m => m ? `<p class="muted small center" style="margin:-4px 0 12px">⚖️ ${C.esc(m)}</p>` : '';
+
+  // ---------- timer de 1 minuto por jogada ----------
+  C.TEMPO = 60000;
+  C.timerLigado = () => C.store.get('timer', true) !== false;           // um celular (vale para todos os jogos)
+  C.setTimer = v => C.store.set('timer', !!v);
+  C.htmlTimerBtn = (on, id) => `<button type="button" class="chip treino-chip ${on ? 'on' : ''}" id="${id || 'timerBtn'}">⏱️ Timer de 1 min por jogada: ${on ? 'LIGADO' : 'desligado'}</button>`;
+  C.htmlTimerCard = on => `<div class="card">${C.htmlTimerBtn(on)}<p class="muted small" style="margin:6px 0 0">Quem não jogar em 1 minuto perde a vez (conta como passe/erro).</p></div>`;
+  C.ligarTimerBtn = (fn, id) => { const b = document.getElementById(id || 'timerBtn'); if (b) b.onclick = fn; };
+  let tmInt = null, tmFim = null;
+  C.pararContagem = () => { clearInterval(tmInt); tmInt = null; tmFim = null; const b = document.getElementById('timerBadge'); if (b) b.remove(); };
+  // mostra a contagem até `prazo` (ms, relógio local). onFim (opcional) é chamado uma vez quando zera.
+  C.contagem = (prazo, onFim) => {
+    if (!global.document) return;
+    clearInterval(tmInt); tmFim = onFim || null;
+    let b = document.getElementById('timerBadge');
+    if (!b) { b = document.createElement('div'); b.id = 'timerBadge'; b.className = 'timer-badge'; document.body.appendChild(b); }
+    const tick = () => {
+      const rest = Math.max(0, prazo - Date.now()), s = Math.ceil(rest / 1000);
+      b.textContent = `⏱️ ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+      b.classList.toggle('pouco', s <= 10);
+      if (rest <= 0) { const f = tmFim; C.pararContagem(); if (f) f(); }
+    };
+    tick(); tmInt = setInterval(tick, 250);
+  };
 
   // Pódio + tabela final a partir de [[nome, pontos], ...] ordenado
   C.htmlPodio = (rank, unidade) => {

@@ -38,7 +38,7 @@
       onEstado: e => { if (!mandouVistas) { mandouVistas = true; enviarVistas(); } if (e.pergunta && e.pergunta.id) marcarVista(e.pergunta.id); if (e.fase === 'lobby' || e.rodada !== rodadaPalpite) meuPalpite = null; estado = e; desenhar(); },
       onAcao: acaoHost, snapshot: () => H,
       onVirarHost: h => { if (h) Sala.salvarHost(JOGO, codigo, h); souHost = true; iniciarH(); app.innerHTML = ''; toast('👑 O anfitrião saiu. Agora você é o anfitrião da sala.'); publicar(); },
-      onDeixarHost: () => { souHost = false; const b = document.getElementById('barraAusentes'); if (b) b.remove(); },
+      onDeixarHost: () => { souHost = false; rel.parar(); const b = document.getElementById('barraAusentes'); if (b) b.remove(); },
       onPresenca: lista => { presentes = lista; if (souHost) publicar(); else desenhar(); },
       onStatus: st => { if (st === 'SUBSCRIBED') { enviarVistas(); if (souHost) publicar(); else if (!estado) desenhar(); } if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') toast('Problema de conexão. Tentando de novo…'); }
     });
@@ -48,6 +48,7 @@
   function publico() {
     const q = H.pergunta;
     return {
+      prazo: (H.fase !== 'lobby' && H.fase !== 'final' && H.prazo) || null,
       fase: H.fase, rodada: H.rodada, total: H.cfg.rodadas, cfg: H.cfg,
       jogadores: H.jogadores, placar: H.placar,
       pergunta: q ? { id: q.id, c: q.c, p: q.p, u: q.u } : null,
@@ -56,9 +57,10 @@
       historico: H.fase === 'final' ? H.historico : null
     };
   }
+  const rel = Sala.relogio(() => H, k => expirar(k));
   function publicar() {
     Sala.salvarHost(JOGO, sala.codigo, H);
-    sala.publicar(publico());
+    sala.publicar(publico()); if (souHost) rel.armar();
   }
 
   function sortear() {
@@ -93,17 +95,18 @@
   }
   function novaRodada() {
     H.rodada++; H.fase = 'pergunta'; H.palpites = {}; H.resultado = null;
-    H.pergunta = sortear();
+    H.pergunta = sortear(); rel.novo('nl' + H.rodada + '-' + H.usadas.length);
     publicar();
   }
+  function expirar() { if (H.fase === 'pergunta') revelar(); }
   function trocar() {
     if (Object.keys(H.palpites).length) { toast('Alguém já respondeu. Não dá mais para trocar.'); return; }
-    H.pergunta = sortear(); publicar();
+    H.pergunta = sortear(); rel.novo('nl' + H.rodada + '-' + H.usadas.length); publicar();
   }
   function revelar() {
     const q = H.pergunta;
-    const quem = H.jogadores.filter(j => H.palpites[j.id] !== undefined);
-    const res = pontuarRodada(q.r, quem.map(j => ({ jogador: j.id, valor: H.palpites[j.id] })));
+    rel.limpar();
+    const res = pontuarRodada(q.r, H.jogadores.map(j => ({ jogador: j.id, valor: H.palpites[j.id] === undefined ? null : H.palpites[j.id] })));
     res.forEach(r => { H.placar[r.jogador] += r.pontos; r.nome = (H.jogadores.find(j => j.id === r.jogador) || {}).nome; });
     H.resultado = res;
     H.historico.push({ p: q.p, r: q.r, u: q.u, res });
@@ -125,6 +128,7 @@
   }
 
   function desenhar() {
+    Sala.mostrarPrazo(estado && estado.prazo);
     // preserva o que a pessoa estava digitando quando chega uma atualização
     const antes = document.getElementById('palpite');
     const valor = antes ? antes.value : null, foco = antes && document.activeElement === antes;
@@ -146,7 +150,7 @@
     render(`
       ${topo('No Limite')}
       ${Sala.htmlCodigo(sala.codigo)}
-      ${Sala.htmlJogadores(presentes, sala.id)}${Sala.htmlTreino(!!(estado.cfg && estado.cfg.treino), souHost)}
+      ${Sala.htmlJogadores(presentes, sala.id)}${Sala.htmlTreino(!!(estado.cfg && estado.cfg.treino), souHost)}${Sala.htmlTimer(!(estado.cfg && estado.cfg.timer === false), souHost)}
       ${souHost ? `
         <div class="card">
           <span class="label">Número de rodadas</span>
@@ -159,6 +163,7 @@
     `);
     Sala.ligarCodigo(sala.codigo);
     if (souHost) Sala.ligarTreino(() => { H.cfg.treino = !H.cfg.treino; publicar(); });
+    if (souHost) Sala.ligarTimer(() => { H.cfg.timer = H.cfg.timer === false; publicar(); });
     if (!souHost) return;
     app.querySelectorAll('[data-rod]').forEach(b => b.onclick = () => { H.cfg.rodadas = +b.dataset.rod; publicar(); });
     app.querySelectorAll('[data-tema]').forEach(b => b.onclick = () => {
@@ -230,9 +235,9 @@
 
   function telaRevelado() {
     const q = estado.pergunta, rv = estado.revelado;
-    const ordem = { exact: 0, close: 1, under: 2, bust: 3 };
+    const ordem = { exact: 0, close: 1, under: 2, bust: 3, tempo: 4 };
     const lista = rv.resultado.slice().sort((a, b) => ordem[a.status] - ordem[b.status] || a.distancia - b.distancia);
-    const tag = { exact: '🎯 CRAVOU', close: '✅ MAIS PERTO', under: 'abaixo', bust: '💥 ESTOUROU' };
+    const tag = { exact: '🎯 CRAVOU', close: '✅ MAIS PERTO', under: 'abaixo', bust: '💥 ESTOUROU', tempo: '⏱️ SEM TEMPO' };
     const ultima = estado.rodada >= estado.total;
     render(`
       ${topo(`Rodada ${estado.rodada}/${estado.total}`)}
@@ -240,8 +245,8 @@
         <div class="answer-box"><div class="answer-num">${fmtN(rv.r, q.u)}</div>${q.u ? `<div class="unit">${esc(q.u)}</div>` : ''}${rv.i ? `<div class="fact">💡 ${esc(rv.i)}</div>` : ''}</div>
       </div>
       <div class="card"><span class="label">Palpites</span>
-        ${lista.map((r, i) => `<div class="result ${r.status}" style="animation-delay:${i * 0.1}s"><span class="who">${esc(r.nome)}<br><span class="tag ${r.status}">${tag[r.status]}</span></span><span class="val">${fmtN(r.valor, q.u)}</span><span class="pts">${r.pontos ? '+' + r.pontos : '0'}</span></div>`).join('')}
-        ${lista.every(r => !r.pontos) ? '<p class="muted small center">Todo mundo estourou. Ninguém pontua.</p>' : ''}
+        ${lista.map((r, i) => `<div class="result ${r.status}" style="animation-delay:${i * 0.1}s"><span class="who">${esc(r.nome)}<br><span class="tag ${r.status}">${tag[r.status]}</span></span><span class="val">${r.valor == null ? '—' : fmtN(r.valor, q.u)}</span><span class="pts">${r.pontos ? '+' + r.pontos : '0'}</span></div>`).join('')}
+        ${lista.every(r => !r.pontos) ? '<p class="muted small center">Ninguém ficou abaixo da resposta. Ninguém pontua.</p>' : ''}
       </div>
       <div class="card"><span class="label">Placar</span>${tabelaPlacar(rv.resultado)}</div>
       ${souHost ? `<button class="btn" id="prox">${ultima ? '🏆 Ver campeão' : 'Próxima rodada'}</button>` : '<p class="muted center">Aguardando o anfitrião…</p>'}

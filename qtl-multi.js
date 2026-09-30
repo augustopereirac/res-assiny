@@ -27,7 +27,7 @@
       onPrivado: d => { if (d && d.aviso) toast(d.aviso); },
       onAcao: acaoHost, snapshot: () => H,
       onVirarHost: h => { if (h) Sala.salvarHost(JOGO, codigo, h); souHost = true; iniciarH(); app.innerHTML = ''; toast('👑 O anfitrião saiu. Agora você é o anfitrião da sala.'); publicar(); },
-      onDeixarHost: () => { souHost = false; const b = document.getElementById('barraAusentes'); if (b) b.remove(); },
+      onDeixarHost: () => { souHost = false; rel.parar(); const b = document.getElementById('barraAusentes'); if (b) b.remove(); },
       onPresenca: lista => { presentes = lista; if (souHost) publicar(); else desenhar(); },
       onStatus: st => { if (st === 'SUBSCRIBED') { if (souHost) publicar(); else if (!estado) desenhar(); } if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') toast('Problema de conexão. Tentando de novo…'); }
     });
@@ -49,6 +49,7 @@
     const j = H.jogoId ? jogoAtual() : null;
     const final = H.fase === 'final';
     return {
+      prazo: (H.fase !== 'lobby' && H.fase !== 'final' && H.prazo) || null,
       fase: H.fase, partida: H.partida, cfg: H.cfg, jogadores: H.jogadores || [],
       jogo: j ? { titulo: j.titulo, competicao: j.competicao, placar: j.placar, data: j.data, local: j.local, incompleto: j.times.some(t => t.reservas_completas === false) } : null,
       ordem: H.ordem || [], vez: H.vez, vivos: H.vivos || [], folgas: H.folgas || {},
@@ -61,7 +62,22 @@
       listaJogos: H.fase === 'lobby' ? null : undefined
     };
   }
-  function publicar() { Sala.salvarHost(JOGO, sala.codigo, H); sala.publicar(publico()); Sala.barraAusentes(H.fase === 'jogo' ? H.vivos || [] : [], presentes, nomeId, tirar); }
+  const rel = Sala.relogio(() => H, k => expirar(k));
+  // cada vez de jogador tem 1 minuto (a chave muda quando muda a vez ou alguém fala)
+  function ajustarPrazo() {
+    if (H.fase !== 'jogo' || H.pendente || H.juiz) { rel.limpar(); return; }
+    const k = [H.partida, H.vez, (H.ditos || []).length, (H.vivos || []).length].join('-');
+    if (H.prazoKey !== k || !H.prazo) rel.novo(k);
+  }
+  function expirar() {
+    if (H.fase !== 'jogo' || H.pendente || H.juiz) return;
+    const jog = H.ordem[H.vez];
+    H.vivos = H.vivos.filter(v => v !== jog);
+    H.log.push(`${nomeId(jog)} saiu porque o tempo acabou.`);
+    H.msg = { tipo: 'bust', html: `⏱️ Acabou o tempo de ${esc(nomeId(jog))}. Está fora.` };
+    fimOuSegue();
+  }
+  function publicar() { if (souHost) ajustarPrazo(); Sala.salvarHost(JOGO, sala.codigo, H); sala.publicar(publico()); if (souHost) rel.armar(); Sala.barraAusentes(H.fase === 'jogo' ? H.vivos || [] : [], presentes, nomeId, tirar); }
 
   function iniciar() {
     const js = presentes.map(p => ({ id: p.id, nome: p.nome }));
@@ -208,6 +224,7 @@
   const faixa = m => m ? `<div class="result ${m.tipo}" style="margin-bottom:14px"><span class="who">${m.html}</span></div>` : '';
 
   function desenhar() {
+    Sala.mostrarPrazo(estado && estado.prazo);
     const antes = document.getElementById('nome');
     const valor = antes ? antes.value : null, foco = antes && document.activeElement === antes;
     desenhar0();
@@ -226,7 +243,7 @@
     render(`
       ${topo('Quem Tava Lá')}
       ${Sala.htmlCodigo(sala.codigo)}
-      ${Sala.htmlJogadores(presentes, sala.id)}${Sala.htmlTreino(!!(estado.cfg && estado.cfg.treino), souHost)}
+      ${Sala.htmlJogadores(presentes, sala.id)}${Sala.htmlTreino(!!(estado.cfg && estado.cfg.treino), souHost)}${Sala.htmlTimer(!(estado.cfg && estado.cfg.timer === false), souHost)}
       ${souHost ? `
         <div class="card"><span class="label">Modo</span>
           <button class="list-opt ${cfg.modo === 'duvido' ? 'on' : ''}" data-modo="duvido"><strong>✋ Com "Duvido"</strong><span class="muted small">Os outros duvidam no próprio celular. O app só confere quando alguém duvida.</span></button>
@@ -240,6 +257,7 @@
     `);
     Sala.ligarCodigo(sala.codigo);
     if (souHost) Sala.ligarTreino(() => { H.cfg.treino = !H.cfg.treino; publicar(); });
+    if (souHost) Sala.ligarTimer(() => { H.cfg.timer = H.cfg.timer === false; publicar(); });
     if (!souHost) return;
     app.querySelectorAll('[data-modo]').forEach(b => b.onclick = () => { H.cfg.modo = b.dataset.modo; publicar(); });
     app.querySelectorAll('[data-jogo]').forEach(b => b.onclick = () => { H.cfg.jogo = b.dataset.jogo; publicar(); setTimeout(() => C.rolarAte(document.getElementById('comecar')), 60); });

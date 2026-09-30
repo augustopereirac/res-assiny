@@ -21,7 +21,7 @@
       onPrivado: d => { if (d && d.aviso) toast(d.aviso); if (d && d.chute) { meuChute = d.chute; if (!meusChutes.some(x => x.rodada === d.chute.rodada && x.passo === d.chute.passo)) meusChutes.push(d.chute); desenhar(); } },
       onAcao: acaoHost, snapshot: () => H,
       onVirarHost: h => { if (h) Sala.salvarHost(JOGO, codigo, h); souHost = true; iniciarH(); app.innerHTML = ''; toast('👑 O anfitrião saiu. Agora você é o anfitrião da sala.'); publicar(); },
-      onDeixarHost: () => { souHost = false; const b = document.getElementById('barraAusentes'); if (b) b.remove(); },
+      onDeixarHost: () => { souHost = false; rel.parar(); const b = document.getElementById('barraAusentes'); if (b) b.remove(); },
       onPresenca: l => { presentes = l; if (souHost) publicar(); else desenhar(); },
       onStatus: st => { if (st === 'SUBSCRIBED') { if (souHost) publicar(); else if (!estado) desenhar(); } }
     });
@@ -36,6 +36,7 @@
     const placar = { ...(H.placar || {}) };
     if (!fim && a) Object.entries(H.acertou || {}).forEach(([id, p]) => { if (!fechado(p)) placar[id] -= a.car.length - p + 1; });
     return {
+      prazo: (H.fase !== 'lobby' && H.fase !== 'final' && H.prazo) || null,
       fase: H.fase, cfg: H.cfg, rodada: H.rodada, rid: H.rid || 0, aviso: H.aviso || '', jogadores: H.jogadores || [], placar,
       passo: H.passo, N: a ? a.car.length : 0,
       clubes: a ? a.car.slice(0, fim ? a.car.length : H.passo).map(c => ({ nome: c.nome, anos: F.anos(c) })) : [],
@@ -45,7 +46,8 @@
       revelado: fim && a ? { nome: a.nome, pos: F.descPos(a), ano: a.ano, sel: a.sel } : null
     };
   }
-  function publicar() { Sala.salvarHost(JOGO, sala.codigo, H); sala.publicar(publico()); }
+  const rel = Sala.relogio(() => H, k => expirar(k));
+  function publicar() { Sala.salvarHost(JOGO, sala.codigo, H); sala.publicar(publico()); if (souHost) rel.armar(); }
   function iniciar() {
     const js = presentes.map(p => ({ id: p.id, nome: p.nome }));
     if (!js.length) return;
@@ -59,7 +61,7 @@
     if (!pool.length) { H.vistos = []; pool = F.poolCarreira(H.cfg.pool).filter(j => !H.usados.includes(j.id)); }
     const j = pool[Math.floor(Math.random() * pool.length)];
     H.alvoId = j.id; H.usados.push(j.id); H.vistos.push(j.id);
-    H.passo = 1; H.acertou = {}; H.resp = {}; H.chutes = []; H.fase = 'jogo';
+    H.passo = 1; H.acertou = {}; H.resp = {}; H.chutes = []; H.fase = 'jogo'; rel.novo(H.rid + '-1');
     publicar();
   }
   // troca o jogador da rodada (ex.: já jogaram com ele). Desfaz os pontos ganhos nele.
@@ -88,32 +90,36 @@
   }
   function checar() {
     const N = alvo().car.length;
-    if (!pendentes().length) { H.fase = 'fimRodada'; return publicar(); }
+    if (!pendentes().length) { H.fase = 'fimRodada'; rel.limpar(); return publicar(); }
     if (pendentes().every(j => H.resp[j.id])) {
-      if (H.passo >= N) { H.fase = 'fimRodada'; return publicar(); }
-      H.passo++; H.resp = {};
+      if (H.passo >= N) { H.fase = 'fimRodada'; rel.limpar(); return publicar(); }
+      H.passo++; H.resp = {}; rel.novo(H.rid + '-' + H.passo);
     }
     publicar();
   }
-  function forcarProximo() { const N = alvo().car.length; if (H.passo >= N) H.fase = 'fimRodada'; else { H.passo++; H.resp = {}; } publicar(); }
+  function forcarProximo() { const N = alvo().car.length; if (H.passo >= N) { H.fase = 'fimRodada'; rel.limpar(); } else { H.passo++; H.resp = {}; rel.novo(H.rid + '-' + H.passo); } publicar(); }
+  // acabou o minuto do clube: quem não chutou passa
+  function expirar() { if (H.fase !== 'jogo') return; pendentes().filter(j => !H.resp[j.id]).forEach(j => H.chutes.push({ quem: j.id, passo: H.passo, passou: true })); forcarProximo(); }
   function proxima() { if (H.rodada >= H.cfg.rodadas) { H.fase = 'final'; publicar(); } else novaRodada(); }
 
   // ---------- telas ----------
   const topo = extra => `<div class="topbar"><span class="pill">Sala ${esc(sala.codigo)}${extra ? ' · ' + extra : ''}</span><a class="link-back" href="carreira.html">Sair</a></div>`;
   const nomeDe = id => (estado.jogadores || []).find(j => j.id === id)?.nome || presentes.find(j => j.id === id)?.nome || '?';
   function desenhar() {
+    Sala.mostrarPrazo(estado && estado.prazo);
     if (!estado) return render(`${topo()}<div class="pass"><div class="emoji">⏳</div><p class="muted">Esperando o anfitrião…</p></div>`);
     ({ lobby: telaLobby, jogo: telaJogo, fimRodada: telaFimRodada, final: telaFinal })[estado.fase]();
   }
   function telaLobby() {
     const cfg = estado.cfg;
-    render(`${topo('Carreira')}${Sala.htmlCodigo(sala.codigo)}${Sala.htmlJogadores(presentes, sala.id)}${Sala.htmlTreino(!!(estado.cfg && estado.cfg.treino), souHost)}
+    render(`${topo('Carreira')}${Sala.htmlCodigo(sala.codigo)}${Sala.htmlJogadores(presentes, sala.id)}${Sala.htmlTreino(!!(estado.cfg && estado.cfg.treino), souHost)}${Sala.htmlTimer(!(estado.cfg && estado.cfg.timer === false), souHost)}
       ${souHost ? `<div class="card"><span class="label">Jogadores sorteados</span>
           ${Object.entries(F.POOLS).map(([k, v]) => `<button class="list-opt ${cfg.pool === k ? 'on' : ''}" data-pool="${k}"><strong>${esc(v.nome)}</strong></button>`).join('')}
           <span class="label" style="margin-top:12px">Rodadas</span><div class="chips">${[3, 5, 10, 15].map(n => `<button class="chip ${cfg.rodadas === n ? 'on' : ''}" data-rod="${n}">${n}</button>`).join('')}</div></div>
         <button class="btn" id="comecar">Começar com ${C.plural(presentes.length, 'jogador', 'jogadores')}</button>` : '<p class="muted center">O anfitrião vai começar.</p>'}`);
     Sala.ligarCodigo(sala.codigo);
     if (souHost) Sala.ligarTreino(() => { H.cfg.treino = !H.cfg.treino; publicar(); });
+    if (souHost) Sala.ligarTimer(() => { H.cfg.timer = H.cfg.timer === false; publicar(); });
     if (!souHost) return;
     app.querySelectorAll('[data-pool]').forEach(b => b.onclick = () => { H.cfg.pool = b.dataset.pool; publicar(); });
     app.querySelectorAll('[data-rod]').forEach(b => b.onclick = () => { H.cfg.rodadas = +b.dataset.rod; publicar(); });

@@ -121,6 +121,14 @@
   F.SLOTS = [{ k: 'A1', g: 'A' }, { k: 'A2', g: 'A' }, { k: 'M1', g: 'M' }, { k: 'M2', g: 'M' }, { k: 'D1', g: 'D' }, { k: 'D2', g: 'D' }, { k: 'G', g: 'G' }];
   const ADJ = { D: ['D', 'M'], M: ['D', 'M', 'A'], A: ['M', 'A'] };
   // goleiro só no gol; na linha, aceita a posição e as vizinhas (o banco às vezes marca atacante como meia etc.)
+  // acabou o tempo no Monta o Time: sorteia um jogador válido do tema para uma posição livre
+  F.sortearAuto = (tema, crit, vazios, ocupadosIds) => {
+    const oc = new Set(ocupadosIds || []);
+    const pool = F.J.filter(j => j.fama >= 15 && !oc.has(j.id) && tema.test(j) && !F.motivoInvalido(j, tema, crit) && vazios.some(s => F.encaixa(j, s.g)));
+    if (!pool.length) return null;
+    const j = pool[Math.floor(Math.random() * pool.length)];
+    return { id: j.id, slot: vazios.find(s => F.encaixa(j, s.g)).k, nome: j.nome };
+  };
   F.encaixa = (j, g) => g === 'G' ? j.pos.includes('G') : [...j.pos].some(p => ADJ[g].includes(p));
 
   F.temaValido = (t, crit) => ['G', 'D', 'M', 'A'].every(gp => J.filter(j => t.test(j) && j.pos.includes(gp) && crit.val(j) != null).length >= 3);

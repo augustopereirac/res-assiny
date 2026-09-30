@@ -33,7 +33,7 @@
       onPrivado: d => { if (d && d.aviso) toast(d.aviso); },
       onAcao: acaoHost, snapshot: () => H,
       onVirarHost: h => { if (h) Sala.salvarHost(JOGO, codigo, h); souHost = true; iniciarH(); app.innerHTML = ''; toast('👑 O anfitrião saiu. Agora você é o anfitrião da sala.'); publicar(); },
-      onDeixarHost: () => { souHost = false; const b = document.getElementById('barraAusentes'); if (b) b.remove(); },
+      onDeixarHost: () => { souHost = false; rel.parar(); const b = document.getElementById('barraAusentes'); if (b) b.remove(); },
       onPresenca: lista => { presentes = lista; if (souHost) publicar(); else desenhar(); },
       onStatus: st => { if (st === 'SUBSCRIBED') { if (souHost) publicar(); else if (!estado) desenhar(); } if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') toast('Problema de conexão. Tentando de novo…'); }
     });
@@ -54,6 +54,7 @@
     const l = H.listaId ? lista() : null;
     const final = H.fase === 'final';
     return {
+      prazo: (H.fase !== 'lobby' && H.fase !== 'final' && H.prazo) || null,
       fase: H.fase, partida: H.partida, cfg: H.cfg, jogadores: H.jogadores || [],
       lista: l ? { titulo: l.titulo, tema: l.tema, referencia: l.referencia, max: maxPos(l) } : null, N: H.N,
       rodada: H.rodada, ordem: H.ordem || [], vez: H.vez, placar: H.placar || {}, vivos: H.vivos || [], folgas: H.folgas || {},
@@ -66,7 +67,25 @@
       acabouLista: H.acabouLista || false
     };
   }
-  function publicar() { Sala.salvarHost(JOGO, sala.codigo, H); sala.publicar(publico()); Sala.barraAusentes(['jogo', 'fimRodada'].includes(H.fase) ? (H.cfg.estilo === 'duvido' ? H.vivos : H.ordem) || [] : [], presentes, nomeId, tirar); }
+  const rel = Sala.relogio(() => H, k => expirar(k));
+  function ajustarPrazo() {
+    if (H.fase !== 'jogo' || H.pendente) { rel.limpar(); return; }
+    const k = [H.partida, H.rodada, H.vez, (H.chutes || []).length, (H.vivos || []).length].join('-');
+    if (H.prazoKey !== k || !H.prazo) rel.novo(k);
+  }
+  // acabou o minuto da vez: conta como erro (no Duvido, está fora)
+  function expirar() {
+    if (H.fase !== 'jogo' || H.pendente) return;
+    const jog = H.ordem[H.vez];
+    if (H.cfg.estilo === 'duvido') {
+      H.vivos = H.vivos.filter(v => v !== jog); H.log.push(`${nomeId(jog)} saiu porque o tempo acabou.`);
+      H.msg = { tipo: 'bust', html: `⏱️ Acabou o tempo de ${esc(nomeId(jog))}. Está fora.` };
+      if (!checarFimDuvido()) { avancarPonteiro(); pularMortosEFolgas(); }
+      return publicar();
+    }
+    registrar({ jogador: jog, texto: '(tempo esgotado)', idx: null, pontos: H.cfg.estilo === 'reverso' ? penal() : 0, status: 'chute' });
+  }
+  function publicar() { if (souHost) ajustarPrazo(); Sala.salvarHost(JOGO, sala.codigo, H); sala.publicar(publico()); if (souHost) rel.armar(); Sala.barraAusentes(['jogo', 'fimRodada'].includes(H.fase) ? (H.cfg.estilo === 'duvido' ? H.vivos : H.ordem) || [] : [], presentes, nomeId, tirar); }
 
   function iniciar() {
     const js = presentes.map(p => ({ id: p.id, nome: p.nome }));
@@ -219,6 +238,7 @@
   const nomeEstilo = e => e === 'duvido' ? '✋ Duvido' : e === 'reverso' ? '🔄 Reverso' : '💯 Pontos';
 
   function desenhar() {
+    Sala.mostrarPrazo(estado && estado.prazo);
     const antes = document.getElementById('chute');
     const valor = antes ? antes.value : null, foco = antes && document.activeElement === antes;
     desenhar0();
@@ -238,7 +258,7 @@
     render(`
       ${topo('Top ' + cfg.tamanho)}
       ${Sala.htmlCodigo(sala.codigo)}
-      ${Sala.htmlJogadores(presentes, sala.id)}${Sala.htmlTreino(!!(estado.cfg && estado.cfg.treino), souHost)}
+      ${Sala.htmlJogadores(presentes, sala.id)}${Sala.htmlTreino(!!(estado.cfg && estado.cfg.treino), souHost)}${Sala.htmlTimer(!(estado.cfg && estado.cfg.timer === false), souHost)}
       ${souHost ? `
         <div class="card"><span class="label">Tamanho</span>
           <div class="chips">${TAMANHOS.map(n => `<button class="chip ${cfg.tamanho === n ? 'on' : ''}" data-tam="${n}">Top ${n}</button>`).join('')}</div></div>
@@ -261,6 +281,7 @@
     `);
     Sala.ligarCodigo(sala.codigo);
     if (souHost) Sala.ligarTreino(() => { H.cfg.treino = !H.cfg.treino; publicar(); });
+    if (souHost) Sala.ligarTimer(() => { H.cfg.timer = H.cfg.timer === false; publicar(); });
     if (!souHost) return;
     const set = (k, v) => { H.cfg[k] = v; publicar(); };
     app.querySelectorAll('[data-k]').forEach(b => b.onclick = () => set(b.dataset.k, b.dataset.v));

@@ -20,7 +20,7 @@
       onPrivado: d => { if (d && d.aviso) toast(d.aviso); },
       onAcao: acaoHost, snapshot: () => H,
       onVirarHost: h => { if (h) Sala.salvarHost(JOGO, codigo, h); souHost = true; iniciarH(); app.innerHTML = ''; toast('👑 O anfitrião saiu. Agora você é o anfitrião da sala.'); publicar(); },
-      onDeixarHost: () => { souHost = false; const b = document.getElementById('barraAusentes'); if (b) b.remove(); },
+      onDeixarHost: () => { souHost = false; rel.parar(); const b = document.getElementById('barraAusentes'); if (b) b.remove(); },
       onPresenca: l => { presentes = l; if (souHost) publicar(); else desenhar(); },
       onStatus: st => { if (st === 'SUBSCRIBED') { if (souHost) publicar(); else if (!estado) desenhar(); } }
     });
@@ -31,12 +31,14 @@
   const crit = () => F.criterio(H.critId || H.cfg.crit) || F.CRITERIOS[0];
   function publico() {
     return {
+      prazo: (H.fase !== 'lobby' && H.fase !== 'final' && H.prazo) || null,
       fase: H.fase, cfg: H.cfg, critId: H.critId, rodada: H.rodada, total: 7, jogadores: H.jogadores || [],
       tema: H.tema ? { nome: H.tema.nome } : null, temaId: H.temaId, ocupados: ocupados(), trocas: H.trocas || 0, aviso: H.aviso || '', times: H.times || {}, escolheu: Object.fromEntries(Object.keys(H.escolhas || {}).map(k => [k, true])),
       revelacao: H.fase === 'revelado' || H.fase === 'final' ? H.revelacao : null, historico: H.fase === 'final' ? H.historico : null
     };
   }
-  function publicar() { Sala.salvarHost(JOGO, sala.codigo, H); sala.publicar(publico()); }
+  const rel = Sala.relogio(() => H, k => expirar(k));
+  function publicar() { Sala.salvarHost(JOGO, sala.codigo, H); sala.publicar(publico()); if (souHost) rel.armar(); }
   function sortearTema() {
     const c = crit();
     const pool = F.TEMAS.filter(t => H.cfg.grupos.includes(t.grupo) && !H.usados.includes(t.id) && F.temaValido(t, c));
@@ -52,7 +54,18 @@
     H.jogadores = js; H.rkId = null; H.times = Object.fromEntries(js.map(j => [j.id, {}])); H.rodada = 0; H.usados = []; H.historico = [];
     novaRodada();
   }
-  function novaRodada() { H.rodada++; H.escolhas = {}; H.revelacao = null; H.tema = sortearTema(); H.temaId = H.tema.id; H.fase = 'escolha'; publicar(); }
+  function novaRodada() { H.rodada++; H.escolhas = {}; H.revelacao = null; H.tema = sortearTema(); H.temaId = H.tema.id; H.fase = 'escolha'; rel.novo(H.rodada + '-' + H.temaId); publicar(); }
+  // acabou o minuto: quem não escolheu ganha um jogador sorteado do tema
+  function expirar() {
+    if (H.fase !== 'escolha') return;
+    const t = temaAtual(), c = crit();
+    H.jogadores.filter(p => !H.escolhas[p.id]).forEach(p => {
+      const time = H.times[p.id], vazios = F.SLOTS.filter(s => !time[s.k]);
+      const a = F.sortearAuto(t, c, vazios, Object.keys(ocupados()).map(Number));
+      if (a) { H.escolhas[p.id] = { id: a.id, slot: a.slot }; sala.privado(p.id, { aviso: `⏱️ Acabou o tempo. Sorteei ${a.nome} para você.`, t: Date.now() }); }
+    });
+    revelar();
+  }
   // jogadores já usados na partida: nos times ou confirmados nesta rodada (id -> dono)
   function ocupados() {
     const o = {};
@@ -74,6 +87,7 @@
     }
   }
   function revelar() {
+    rel.limpar();
     const t = temaAtual(), c = crit();
     H.revelacao = H.jogadores.filter(p => H.escolhas[p.id]).map(p => {
       const e = H.escolhas[p.id], j = F.porId[e.id], r = F.pontuar(j, t, c);
@@ -88,7 +102,7 @@
   function trocarTema(quem) {
     if (H.fase !== 'escolha') return;
     const ja = Object.keys(H.escolhas).length;
-    H.tema = sortearTema(); H.temaId = H.tema.id; H.escolhas = {}; H.trocas = (H.trocas || 0) + 1;
+    H.tema = sortearTema(); H.temaId = H.tema.id; H.escolhas = {}; H.trocas = (H.trocas || 0) + 1; rel.novo(H.rodada + '-' + H.temaId);
     H.aviso = `${quem ? nomeId(quem) : 'Alguém'} trocou o tema${ja ? ' — escolham de novo' : ''}.`;
     publicar();
   }
@@ -98,12 +112,13 @@
   const nomeDe = id => (estado.jogadores || []).find(j => j.id === id)?.nome || presentes.find(j => j.id === id)?.nome || '?';
   const C_ = () => F.criterio(estado.critId || estado.cfg.crit) || F.CRITERIOS[0];
   function desenhar() {
+    Sala.mostrarPrazo(estado && estado.prazo);
     if (!estado) return render(`${topo()}<div class="pass"><div class="emoji">⏳</div><p class="muted">Esperando o anfitrião…</p></div>`);
     ({ lobby: telaLobby, escolha: telaEscolha, revelado: telaRevelado, final: telaFinal })[estado.fase]();
   }
   function telaLobby() {
     const cfg = estado.cfg;
-    render(`${topo('Monta o Time')}${Sala.htmlCodigo(sala.codigo)}${Sala.htmlJogadores(presentes, sala.id)}${Sala.htmlTreino(!!(estado.cfg && estado.cfg.treino), souHost)}
+    render(`${topo('Monta o Time')}${Sala.htmlCodigo(sala.codigo)}${Sala.htmlJogadores(presentes, sala.id)}${Sala.htmlTreino(!!(estado.cfg && estado.cfg.treino), souHost)}${Sala.htmlTimer(!(estado.cfg && estado.cfg.timer === false), souHost)}
       ${souHost ? `<div class="card"><span class="label">Critério da partida</span>
           <button class="list-opt ${cfg.crit === 'sortear' ? 'on' : ''}" data-crit="sortear"><strong>🎲 Sortear</strong></button>
           ${F.CRITERIOS.map(c => `<button class="list-opt ${cfg.crit === c.id ? 'on' : ''}" data-crit="${c.id}"><strong>${esc(c.nome)}</strong><span class="muted small">${esc(c.desc)}</span></button>`).join('')}</div>
@@ -112,6 +127,7 @@
         : '<p class="muted center">O anfitrião escolhe o critério e começa.</p>'}`);
     Sala.ligarCodigo(sala.codigo);
     if (souHost) Sala.ligarTreino(() => { H.cfg.treino = !H.cfg.treino; publicar(); });
+    if (souHost) Sala.ligarTimer(() => { H.cfg.timer = H.cfg.timer === false; publicar(); });
     if (!souHost) return;
     app.querySelectorAll('[data-crit]').forEach(b => b.onclick = () => { H.cfg.crit = b.dataset.crit; publicar(); });
     app.querySelectorAll('[data-gp]').forEach(b => b.onclick = () => { const g = b.dataset.gp; H.cfg.grupos = H.cfg.grupos.includes(g) ? H.cfg.grupos.filter(x => x !== g) : [...H.cfg.grupos, g]; if (!H.cfg.grupos.length) H.cfg.grupos = [g]; publicar(); });

@@ -26,7 +26,7 @@
   const salvar = () => ['lista', 'estilo', 'tamanho', 'modo', 'rodadas', 'alvoMult'].forEach(k => store.set('top100:' + k, cfg[k]));
 
   let jogo = null;
-  const render = html => { app.innerHTML = html; window.scrollTo(0, 0); };
+  const render = html => { C.pararContagem(); app.innerHTML = html; window.scrollTo(0, 0); };
   const maxPos = l => Math.max(...l.itens.map(i => i.pos));
   const tamanhoEfetivo = l => Math.min(cfg.tamanho, maxPos(l));
   const alvo = () => cfg.alvoMult * cfg.tamanho;
@@ -258,7 +258,7 @@
           <span class="who">${esc(u.jogador)}<br><span class="small muted">${descChute(u)}</span></span>
           <span class="pts">${fmtPts(u.pontos)}</span>
         </div>
-        ${u.item || u.passou ? '' : '<button class="link-back small" id="desfazer" style="text-decoration:underline;margin:-6px 0 14px">Digitei errado, deixar corrigir</button>'}` : ''}
+        ${u.item || u.passou || u.tempo ? '' : '<button class="link-back small" id="desfazer" style="text-decoration:underline;margin:-6px 0 14px">Digitei errado, deixar corrigir</button>'}` : ''}
       <div class="card">
         <span class="pill theme">${esc(jogo.lista.titulo)} · Top ${jogo.N}</span>
         <p style="margin:14px 0 8px"><strong style="font-size:1.4rem">${esc(nome)}</strong>, seu chute:</p>
@@ -277,6 +277,7 @@
     inp.focus();
     document.getElementById('f').onsubmit = e => { e.preventDefault(); chutar(inp.value); };
     document.getElementById('passar').onclick = () => registrar({ jogador: nome, texto: '', item: null, pontos: valorPassar, passou: true });
+    if (C.timerLigado()) C.contagem(Date.now() + C.TEMPO, () => { toast('⏱️ Acabou o tempo de ' + nome + '. Conta como erro.'); registrar({ jogador: nome, texto: '(tempo esgotado)', item: null, tempo: true, pontos: cfg.estilo === 'reverso' ? penalidade() : 0 }); });
     const d = document.getElementById('desfazer');
     if (d) d.onclick = desfazer;
   }
@@ -402,6 +403,10 @@
       if (id.erro) { toast(id.erro); return; }
       telaDuvido(nome, texto, id.item || null, id.itemFora || null);
     };
+    if (C.timerLigado()) C.contagem(Date.now() + C.TEMPO, () => {
+      jogo.vivos.delete(nome); jogo.log.push(`${nome} saiu porque o tempo acabou.`); avancarPonteiro();
+      telaRevelacao(false, '⏱️ Acabou o tempo', `${nome} está fora.`);
+    });
   }
 
   function telaDuvido(nome, texto, item, itemFora) {

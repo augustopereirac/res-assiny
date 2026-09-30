@@ -294,3 +294,7 @@ table.score.rank th{font-size:.75rem;color:var(--muted,#9aa);text-align:left;fon
 .badge-treino{position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:70;background:#2b3a1f;border:1px solid #9be26b;color:#d9ffc2;font-weight:700;font-size:.75rem;padding:4px 10px;border-radius:999px;pointer-events:none;white-space:nowrap}
 .treino-chip.on{background:#2b3a1f;border-color:#9be26b;color:#d9ffc2}
 .sug.sel { border-color: var(--accent2); background: color-mix(in srgb, var(--accent2) 14%, var(--bg2)); }
+
+.timer-badge{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:60;background:rgba(20,20,40,.92);border:1px solid rgba(255,255,255,.18);color:#fff;font-weight:800;font-size:1.05rem;padding:8px 16px;border-radius:999px;box-shadow:0 6px 20px rgba(0,0,0,.35);font-variant-numeric:tabular-nums}
+.timer-badge.pouco{background:#c62828;border-color:#ff8a80;animation:pulsoTimer 1s infinite}
+@keyframes pulsoTimer{50%{transform:translateX(-50%) scale(1.08)}}

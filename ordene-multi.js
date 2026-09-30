@@ -19,7 +19,7 @@
       onEstado: e => { const k = e.rodada + ':' + (e.alvo ? e.alvo.nome : ''); if (estado && e.trocas > (estado.trocas || 0) && e.aviso) toast('🔄 ' + e.aviso); if (k !== rodadaOrdem) { ordem = []; rodadaOrdem = k; enviado = null; } estado = e; desenhar(); },
       onAcao: acaoHost, snapshot: () => H,
       onVirarHost: h => { if (h) Sala.salvarHost(JOGO, codigo, h); souHost = true; iniciarH(); app.innerHTML = ''; toast('👑 O anfitrião saiu. Agora você é o anfitrião da sala.'); publicar(); },
-      onDeixarHost: () => { souHost = false; const b = document.getElementById('barraAusentes'); if (b) b.remove(); },
+      onDeixarHost: () => { souHost = false; rel.parar(); const b = document.getElementById('barraAusentes'); if (b) b.remove(); },
       onPresenca: l => { presentes = l; if (souHost) publicar(); else desenhar(); },
       onStatus: st => { if (st === 'SUBSCRIBED') { if (souHost) publicar(); else if (!estado) desenhar(); } }
     });
@@ -29,6 +29,7 @@
   function publico() {
     const a = H.alvoId ? F.porId[H.alvoId] : null, rev = H.fase === 'revelado' || H.fase === 'final';
     return {
+      prazo: (H.fase !== 'lobby' && H.fase !== 'final' && H.prazo) || null,
       fase: H.fase, cfg: H.cfg, trocas: H.trocas || 0, aviso: H.aviso || '', rodada: H.rodada, jogadores: H.jogadores || [], placar: H.placar || {}, tb: H.fase === 'final' ? (H.tb || {}) : null,
       alvo: a ? { nome: a.nome, pos: F.descPos(a), ano: a.ano, n: a.car.length } : null,
       embaralhado: H.embaralhado || [], enviaram: Object.fromEntries(Object.keys(H.resp || {}).map(k => [k, true])),
@@ -36,7 +37,9 @@
       respostas: rev ? H.resp : null, resultado: rev ? H.resultado : null
     };
   }
-  function publicar() { Sala.salvarHost(JOGO, sala.codigo, H); sala.publicar(publico()); }
+  const rel = Sala.relogio(() => H, k => expirar(k), 3000); // folga: dá tempo de chegar a ordem enviada automaticamente
+  function expirar() { if (H.fase === 'ordenar') revelar(); }
+  function publicar() { Sala.salvarHost(JOGO, sala.codigo, H); sala.publicar(publico()); if (souHost) rel.armar(); }
   function iniciar() {
     const js = presentes.map(p => ({ id: p.id, nome: p.nome }));
     if (!js.length) return;
@@ -52,7 +55,7 @@
     const certo = j.car.map(c => c.nome);
     let emb = C.shuffle(certo.slice());
     if (emb.every((n, i) => n === certo[i]) && certo.length > 1) emb.reverse();
-    H.embaralhado = emb; H.resp = {}; H.resultado = null; H.fase = 'ordenar';
+    H.embaralhado = emb; H.resp = {}; H.resultado = null; H.fase = 'ordenar'; rel.novo(H.rodada + '-' + (H.trocas || 0) + '-' + j.id);
     publicar();
   }
   function acaoHost(msg) {
@@ -65,6 +68,7 @@
   }
   function revelar() {
     const certo = F.porId[H.alvoId].car.map(c => c.nome);
+    rel.limpar();
     H.resultado = {};
     Object.entries(H.resp).forEach(([id, r]) => {
       const ac = r.filter((n, i) => n === certo[i]).length, pts = ac + (ac === certo.length ? 3 : 0);
@@ -81,18 +85,20 @@
   const nomeDe = id => (estado.jogadores || []).find(j => j.id === id)?.nome || presentes.find(j => j.id === id)?.nome || '?';
   const placar = () => `<table class="score">${Object.entries(estado.placar).sort((a, b) => b[1] - a[1]).map(([id, v]) => `<tr><td>${esc(nomeDe(id))}${id === sala.id ? ' <span class="muted small">(você)</span>' : ''}</td><td>${C.plural(v, 'pt')}</td></tr>`).join('')}</table>`;
   function desenhar() {
+    Sala.mostrarPrazo(estado && estado.prazo);
     if (!estado) return render(`${topo()}<div class="pass"><div class="emoji">⏳</div><p class="muted">Esperando o anfitrião…</p></div>`);
     ({ lobby: telaLobby, ordenar: telaOrdenar, revelado: telaRevelado, final: telaFinal })[estado.fase]();
   }
   function telaLobby() {
     const cfg = estado.cfg;
-    render(`${topo('Ordene a Carreira')}${Sala.htmlCodigo(sala.codigo)}${Sala.htmlJogadores(presentes, sala.id)}${Sala.htmlTreino(!!(estado.cfg && estado.cfg.treino), souHost)}
+    render(`${topo('Ordene a Carreira')}${Sala.htmlCodigo(sala.codigo)}${Sala.htmlJogadores(presentes, sala.id)}${Sala.htmlTreino(!!(estado.cfg && estado.cfg.treino), souHost)}${Sala.htmlTimer(!(estado.cfg && estado.cfg.timer === false), souHost)}
       ${souHost ? `<div class="card"><span class="label">Jogadores sorteados</span>
           ${Object.entries(F.POOLS).map(([k, v]) => `<button class="list-opt ${cfg.pool === k ? 'on' : ''}" data-pool="${k}"><strong>${esc(v.nome)}</strong></button>`).join('')}
           <span class="label" style="margin-top:12px">Rodadas</span><div class="chips">${[3, 5, 10, 15].map(n => `<button class="chip ${cfg.rodadas === n ? 'on' : ''}" data-rod="${n}">${n}</button>`).join('')}</div></div>
         <button class="btn" id="comecar">Começar com ${C.plural(presentes.length, 'jogador', 'jogadores')}</button>` : '<p class="muted center">O anfitrião vai começar.</p>'}`);
     Sala.ligarCodigo(sala.codigo);
     if (souHost) Sala.ligarTreino(() => { H.cfg.treino = !H.cfg.treino; publicar(); });
+    if (souHost) Sala.ligarTimer(() => { H.cfg.timer = H.cfg.timer === false; publicar(); });
     if (!souHost) return;
     app.querySelectorAll('[data-pool]').forEach(b => b.onclick = () => { H.cfg.pool = b.dataset.pool; publicar(); });
     app.querySelectorAll('[data-rod]').forEach(b => b.onclick = () => { H.cfg.rodadas = +b.dataset.rod; publicar(); });
@@ -120,6 +126,8 @@
     document.getElementById('desfazer').onclick = () => { ordem.pop(); telaOrdenar(); };
     document.getElementById('limpar').onclick = () => { ordem = []; telaOrdenar(); };
     document.getElementById('ok').onclick = () => { enviado = true; sala.enviar('ordem', { ordem }); telaOrdenar(); };
+    // acabou o tempo: envia a ordem que estiver na tela (o que faltar entra na ordem mostrada)
+    if (estado.prazo) C.contagem(estado.prazo, () => { estado.embaralhado.forEach((c, k) => { if (!ordem.includes(k)) ordem.push(k); }); enviado = true; sala.enviar('ordem', { ordem }); toast('⏱️ Acabou o tempo. Enviei a ordem que estava.'); telaOrdenar(); });
   }
   function telaRevelado() {
     render(`${topo(`Rodada ${estado.rodada}/${estado.cfg.rodadas}`)}
