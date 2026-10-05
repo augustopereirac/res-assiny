@@ -30,5 +30,15 @@
     });
   }
 
-  global.NoLimiteRegras = { pontuarRodada };
+  // Selo "Donan": palpite muito longe da resposta.
+  // Anos: 20 ou mais de diferença. Outros números: metade ou menos, ou o dobro ou mais da resposta.
+  function donan(resposta, valor, unidade) {
+    if (valor == null) return false;
+    if (unidade === 'ano') return Math.abs(valor - resposta) >= 20;
+    if (resposta <= 0) return Math.abs(valor - resposta) >= 10;
+    if (valor <= 0) return true;
+    return valor / resposta >= 2 || resposta / valor >= 2;
+  }
+  const htmlDonan = '<span class="selo-donan"><img src="donan.png" alt="Donan" width="44" height="44"><span>DONAN</span></span>';
+  global.NoLimiteRegras = { pontuarRodada, donan, htmlDonan };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -300,3 +300,6 @@ table.score.rank th{font-size:.75rem;color:var(--muted,#9aa);text-align:left;fon
 @keyframes pulsoTimer{50%{transform:translateX(-50%) scale(1.08)}}
 
 .guess-input.oculto{-webkit-text-security:disc;text-security:disc}
+.selo-donan{display:inline-flex;align-items:center;gap:6px;margin-left:8px;vertical-align:middle;background:#3b2414;border:1px solid #c98a3a;color:#ffd9a0;font-weight:900;font-size:.78rem;letter-spacing:.06em;padding:2px 10px 2px 2px;border-radius:999px;animation:donanPop .6s ease-out}
+.selo-donan img{width:44px;height:44px;border-radius:50%;display:block}
+@keyframes donanPop{0%{transform:scale(0) rotate(-25deg)}70%{transform:scale(1.15) rotate(6deg)}100%{transform:scale(1) rotate(0)}}

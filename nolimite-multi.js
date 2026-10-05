@@ -4,7 +4,7 @@
   const { esc, toast } = C;
   const app = document.getElementById('app');
   const PERGUNTAS = window.PERGUNTAS || [];
-  const { pontuarRodada } = window.NoLimiteRegras;
+  const { pontuarRodada, donan, htmlDonan } = window.NoLimiteRegras;
   const TEMAS = [...new Set(PERGUNTAS.map(q => q.c))];
   const JOGO = 'nolimite';
 
@@ -250,7 +250,7 @@
         <div class="answer-box"><div class="answer-num">${fmtN(rv.r, q.u)}</div>${q.u ? `<div class="unit">${esc(q.u)}</div>` : ''}${rv.i ? `<div class="fact">💡 ${esc(rv.i)}</div>` : ''}</div>
       </div>
       <div class="card"><span class="label">Palpites</span>
-        ${lista.map((r, i) => `<div class="result ${r.status}" style="animation-delay:${i * 0.1}s"><span class="who">${esc(r.nome)}<br><span class="tag ${r.status}">${tag[r.status]}</span></span><span class="val">${r.valor == null ? '—' : fmtN(r.valor, q.u)}</span><span class="pts">${r.pontos ? '+' + r.pontos : '0'}</span></div>`).join('')}
+        ${lista.map((r, i) => `<div class="result ${r.status}" style="animation-delay:${i * 0.1}s"><span class="who">${esc(r.nome)}<br><span class="tag ${r.status}">${tag[r.status]}</span>${donan(rv.r, r.valor, q.u) ? htmlDonan : ''}</span><span class="val">${r.valor == null ? '—' : fmtN(r.valor, q.u)}</span><span class="pts">${r.pontos ? '+' + r.pontos : '0'}</span></div>`).join('')}
         ${lista.every(r => !r.pontos) ? '<p class="muted small center">Ninguém ficou abaixo da resposta. Ninguém pontua.</p>' : ''}
       </div>
       <div class="card"><span class="label">Placar</span>${tabelaPlacar(rv.resultado)}</div>

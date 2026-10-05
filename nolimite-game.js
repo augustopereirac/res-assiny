@@ -3,7 +3,7 @@
   const app = document.getElementById('app');
   const C = window.Comum;
   const PERGUNTAS = window.PERGUNTAS || [];
-  const { pontuarRodada } = window.NoLimiteRegras;
+  const { pontuarRodada, donan, htmlDonan } = window.NoLimiteRegras;
   const TEMAS = [...new Set(PERGUNTAS.map(q => q.c))];
   const OPCOES_RODADAS = [5, 10, 15, 20];
 
@@ -295,7 +295,7 @@
         <span class="label">Palpites</span>
         ${lista.map((r, idx) => `
           <div class="result ${r.status}" style="animation-delay:${idx * 0.12}s">
-            <span class="who">${esc(r.jogador)}<br><span class="tag ${r.status}">${tagTxt[r.status]}</span></span>
+            <span class="who">${esc(r.jogador)}<br><span class="tag ${r.status}">${tagTxt[r.status]}</span>${donan(q.r, r.valor, q.u) ? htmlDonan : ''}</span>
             <span class="val">${r.valor == null ? '—' : fmt(r.valor)}</span>
             <span class="pts">${r.pontos ? '+' + r.pontos : '0'}</span>
           </div>`).join('')}
