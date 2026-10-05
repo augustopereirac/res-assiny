@@ -298,3 +298,5 @@ table.score.rank th{font-size:.75rem;color:var(--muted,#9aa);text-align:left;fon
 .timer-badge{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:60;background:rgba(20,20,40,.92);border:1px solid rgba(255,255,255,.18);color:#fff;font-weight:800;font-size:1.05rem;padding:8px 16px;border-radius:999px;box-shadow:0 6px 20px rgba(0,0,0,.35);font-variant-numeric:tabular-nums}
 .timer-badge.pouco{background:#c62828;border-color:#ff8a80;animation:pulsoTimer 1s infinite}
 @keyframes pulsoTimer{50%{transform:translateX(-50%) scale(1.08)}}
+
+.guess-input.oculto{-webkit-text-security:disc;text-security:disc}

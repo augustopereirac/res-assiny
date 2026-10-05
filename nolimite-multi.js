@@ -192,10 +192,10 @@
       ${topo(`Rodada ${estado.rodada}/${estado.total}`)}
       ${blocoPergunta(q)}
       ${!souJogador() ? '<p class="muted center">Você está assistindo esta partida.</p>' : respondi ? `
-        <div class="card center"><div class="muted small">Seu palpite</div><div class="answer-num" style="font-size:2.6rem">${meuPalpite !== null ? fmtN(meuPalpite, q.u) : '✔'}</div><div class="muted small">Aguardando os outros…</div></div>
+        <div class="card center"><div class="muted small">Seu palpite</div><div class="answer-num" id="meuNum" style="font-size:2.6rem">🔒</div><div class="muted small">Enviado e escondido para ninguém ver.</div>${meuPalpite !== null ? '<button type="button" class="btn ghost small" id="verMeu" style="margin-top:8px">👁 Segure para ver</button>' : ''}<div class="muted small" style="margin-top:6px">Aguardando os outros…</div></div>
       ` : `
         <form id="fp">
-          <input class="guess-input" id="palpite" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+          <input class="guess-input oculto" id="palpite" type="text" inputmode="numeric" autocomplete="off" placeholder="0"><button type="button" class="btn ghost small" id="olhoPalpite" style="margin:6px 0 10px">👁 Segure para ver o que digitou</button>
           <button class="btn" type="submit" id="confirmar" disabled>Confirmar palpite</button>
         </form>`}
       ${statusRespostas()}
@@ -204,7 +204,12 @@
         ${n ? '' : '<button class="btn ghost" id="trocar">🔄 Já conhecemos essa, sortear outra</button>'}
       ` : ''}
     `);
+    // palpite escondido (tela ao lado não vê): segura o botão para mostrar
+    const segurar = (btn, on, off) => { if (!btn) return; ['pointerdown'].forEach(ev => btn.addEventListener(ev, e => { e.preventDefault(); on(); })); ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => btn.addEventListener(ev, off)); };
+    const num = document.getElementById('meuNum');
+    segurar(document.getElementById('verMeu'), () => { num.textContent = fmtN(meuPalpite, q.u); }, () => { num.textContent = '🔒'; });
     const inp = document.getElementById('palpite');
+    segurar(document.getElementById('olhoPalpite'), () => inp.classList.remove('oculto'), () => inp.classList.add('oculto'));
     if (inp) {
       const btn = document.getElementById('confirmar');
       inp.oninput = () => {
