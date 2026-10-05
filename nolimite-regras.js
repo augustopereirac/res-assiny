@@ -39,6 +39,6 @@
     if (valor <= 0) return true;
     return valor / resposta >= 2 || resposta / valor >= 2;
   }
-  const htmlDonan = '<span class="selo-donan"><img src="donan.png" alt="Donan" width="44" height="44"><span>DONAN</span></span>';
+  const htmlDonan = '<img class="selo-donan" src="donan.png" alt="Donan" title="Donan" width="40" height="40" style="width:40px;height:40px;border-radius:50%;vertical-align:middle;margin-right:10px">';
   global.NoLimiteRegras = { pontuarRodada, donan, htmlDonan };
 })(typeof window !== 'undefined' ? window : globalThis);

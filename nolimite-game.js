@@ -295,8 +295,8 @@
         <span class="label">Palpites</span>
         ${lista.map((r, idx) => `
           <div class="result ${r.status}" style="animation-delay:${idx * 0.12}s">
-            <span class="who">${esc(r.jogador)}<br><span class="tag ${r.status}">${tagTxt[r.status]}</span>${donan(q.r, r.valor, q.u) ? htmlDonan : ''}</span>
-            <span class="val">${r.valor == null ? '—' : fmt(r.valor)}</span>
+            <span class="who">${esc(r.jogador)}<br><span class="tag ${r.status}">${tagTxt[r.status]}</span></span>
+            <span class="val">${donan(q.r, r.valor, q.u) ? htmlDonan : ''}${r.valor == null ? '—' : fmt(r.valor)}</span>
             <span class="pts">${r.pontos ? '+' + r.pontos : '0'}</span>
           </div>`).join('')}
         ${ninguem ? '<p class="muted small center" style="margin:8px 0 0">Ninguém ficou abaixo da resposta. Ninguém pontua nesta rodada.</p>' : ''}
