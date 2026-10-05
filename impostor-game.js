@@ -158,8 +158,8 @@
   function cartaSecreta(nome) {
     const imp = p.impostores.has(nome);
     const q = p.palavra;
-    if (!imp) return `<div class="secret"><div class="muted small">A palavra é</div><div class="secret-word">${esc(q.p)}</div><div class="muted small">${esc(q.c)}</div></div>`;
-    if (cfg.modo === 'parecida') return `<div class="secret"><div class="muted small">A palavra é</div><div class="secret-word">${esc(q.s)}</div><div class="muted small">${esc(q.c)}</div></div>`;
+    if (!imp) return `<div class="secret"><div class="muted small">A palavra é</div><div class="secret-word">${esc(q.p)}</div></div>`;
+    if (cfg.modo === 'parecida') return `<div class="secret"><div class="muted small">A palavra é</div><div class="secret-word">${esc(q.s)}</div></div>`;
     return `<div class="secret imp"><div class="secret-word" style="color:var(--accent)">Você é o IMPOSTOR</div>
       ${cfg.impostores > 1 ? `<div class="muted small">Tem ${cfg.impostores} impostores nesta partida.</div>` : ''}
       <div style="margin-top:14px" class="muted small">Dica</div><div style="font-size:1.3rem;font-weight:800">${esc(q.d)}</div>

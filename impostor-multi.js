@@ -117,8 +117,8 @@
     const q = H.palavra;
     lista.forEach(j => {
       const imp = H.impostores.includes(j.id);
-      H.cartas[j.id] = !imp ? { tipo: 'normal', palavra: q.p, c: q.c }
-        : H.cfg.modo === 'parecida' ? { tipo: 'normal', palavra: q.s, c: q.c }
+      H.cartas[j.id] = !imp ? { tipo: 'normal', palavra: q.p }
+        : H.cfg.modo === 'parecida' ? { tipo: 'normal', palavra: q.s }
         : { tipo: 'impostor', dica: q.d, c: q.c, qtd: nImp };
     });
     sala.limparPrivados();
@@ -259,7 +259,7 @@
       ${carta.qtd > 1 ? `<div class="muted small">Tem ${carta.qtd} impostores nesta partida.</div>` : ''}
       <div style="margin-top:14px" class="muted small">Dica</div><div style="font-size:1.3rem;font-weight:800">${esc(carta.dica)}</div>
       <div class="muted small" style="margin-top:6px">${esc(carta.c)}</div></div>`;
-    return `<div class="secret"><div class="muted small">A palavra é</div><div class="secret-word">${esc(carta.palavra)}</div><div class="muted small">${esc(carta.c)}</div></div>`;
+    return `<div class="secret"><div class="muted small">A palavra é</div><div class="secret-word">${esc(carta.palavra)}</div></div>`;
   }
 
   function cartaCard() {
