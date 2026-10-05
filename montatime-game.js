@@ -141,7 +141,7 @@
       const oc = cfg.jogadores.flatMap(n => [...Object.values(p.times[n]).filter(Boolean).map(s => s.id), ...(p.escolhas[n] ? [p.escolhas[n].id] : [])]);
       const a = F.sortearAuto(p.tema, p.crit, vazios, oc);
       if (a) { p.escolhas[nome] = { id: a.id, slot: a.slot }; toast(`⏱️ Acabou o tempo de ${nome}. Sorteei ${a.nome}.`); }
-      else { const s = vazios[0]; const j = F.J.find(x => F.encaixa(x, s.g)); p.escolhas[nome] = { id: j.id, slot: s.k }; }
+      else { const s = ['G', 'D', 'M', 'A'].map(g => vazios.find(x => x.g === g)).find(Boolean); const j = F.J.find(x => F.encaixa(x, s.g)); p.escolhas[nome] = { id: j.id, slot: s.k }; }
       seguir();
     });
   }

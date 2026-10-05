@@ -122,12 +122,19 @@
   const ADJ = { D: ['D', 'M'], M: ['D', 'M', 'A'], A: ['M', 'A'] };
   // goleiro só no gol; na linha, aceita a posição e as vizinhas (o banco às vezes marca atacante como meia etc.)
   // acabou o tempo no Monta o Time: sorteia um jogador válido do tema para uma posição livre
+  // acabou o tempo no Monta o Time: sorteia um jogador válido do tema para uma posição livre,
+  // nesta ordem de prioridade: goleiro, defensor, meio-campo e, só por último, atacante
   F.sortearAuto = (tema, crit, vazios, ocupadosIds) => {
     const oc = new Set(ocupadosIds || []);
-    const pool = F.J.filter(j => j.fama >= 15 && !oc.has(j.id) && tema.test(j) && !F.motivoInvalido(j, tema, crit) && vazios.some(s => F.encaixa(j, s.g)));
-    if (!pool.length) return null;
-    const j = pool[Math.floor(Math.random() * pool.length)];
-    return { id: j.id, slot: vazios.find(s => F.encaixa(j, s.g)).k, nome: j.nome };
+    const validos = F.J.filter(j => j.fama >= 15 && !oc.has(j.id) && tema.test(j) && !F.motivoInvalido(j, tema, crit));
+    for (const g of ['G', 'D', 'M', 'A']) {
+      const s = vazios.find(x => x.g === g); if (!s) continue;
+      const pool = validos.filter(j => F.encaixa(j, g));
+      if (!pool.length) continue;
+      const j = pool[Math.floor(Math.random() * pool.length)];
+      return { id: j.id, slot: s.k, nome: j.nome };
+    }
+    return null;
   };
   F.encaixa = (j, g) => g === 'G' ? j.pos.includes('G') : [...j.pos].some(p => ADJ[g].includes(p));
 
