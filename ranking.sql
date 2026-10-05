@@ -22,3 +22,22 @@ create policy "rj_part_ler" on public.rj_partidas for select to anon, authentica
 create policy "rj_part_inserir" on public.rj_partidas for insert to anon, authenticated with check (true);
 grant select, insert on public.rj_jogadores to anon, authenticated;
 grant select, insert on public.rj_partidas to anon, authenticated;
+-- remoção de jogadores (ranking e cadastro)
+create table if not exists public.rj_removidos (
+  chave text primary key check (char_length(chave) <= 40),
+  nome text check (char_length(nome) <= 30),
+  criado timestamptz not null default now()
+);
+alter table public.rj_removidos enable row level security;
+drop policy if exists "rj_rem_ler" on public.rj_removidos;
+drop policy if exists "rj_rem_inserir" on public.rj_removidos;
+drop policy if exists "rj_rem_atualizar" on public.rj_removidos;
+drop policy if exists "rj_rem_apagar" on public.rj_removidos;
+drop policy if exists "rj_jog_apagar" on public.rj_jogadores;
+create policy "rj_rem_ler" on public.rj_removidos for select to anon, authenticated using (true);
+create policy "rj_rem_inserir" on public.rj_removidos for insert to anon, authenticated with check (true);
+create policy "rj_rem_atualizar" on public.rj_removidos for update to anon, authenticated using (true) with check (true);
+create policy "rj_rem_apagar" on public.rj_removidos for delete to anon, authenticated using (true);
+create policy "rj_jog_apagar" on public.rj_jogadores for delete to anon, authenticated using (true);
+grant select, insert, update, delete on public.rj_removidos to anon, authenticated;
+grant delete on public.rj_jogadores to anon, authenticated;

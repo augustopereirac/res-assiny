@@ -18,18 +18,32 @@
 
   // ---------- cadastrados ----------
   let cad = ls.get('cad', []); // [nome]
+  let removidos = new Set(ls.get('removidos', [])); // chaves de quem foi removido do ranking/cadastro
   let carregou = null;
-  R.cadastrados = () => cad.slice();
+  R.removido = n => removidos.has(R.chave(n));
+  R.cadastrados = () => cad.filter(n => !R.removido(n));
   R.atualizar = (forcar) => {
-    if (!carregou || forcar) carregou = api('rj_jogadores?select=nome&order=nome.asc&limit=1000')
+    if (!carregou || forcar) carregou = api('rj_removidos?select=chave&limit=1000').then(l => { removidos = new Set(l.map(x => x.chave)); ls.set('removidos', [...removidos]); }).catch(() => {})
+      .then(() => api('rj_jogadores?select=nome&order=nome.asc&limit=1000'))
       .then(l => { cad = l.map(x => x.nome); ls.set('cad', cad); enviarFila(); return cad; })
       .catch(() => cad);
     return carregou;
   };
+  // remove do cadastro e esconde do ranking (as partidas antigas continuam valendo para os outros)
+  R.remover = nome => {
+    const k = R.chave(nome);
+    removidos.add(k); ls.set('removidos', [...removidos]);
+    cad = cad.filter(n => R.chave(n) !== k); ls.set('cad', cad);
+    return api('rj_removidos?on_conflict=chave', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify([{ chave: k, nome }]) })
+      .then(() => api('rj_jogadores?chave=eq.' + encodeURIComponent(k), { method: 'DELETE', headers: { Prefer: 'return=minimal' } }).catch(() => {}));
+  };
+  const restaurar = nome => { const k = R.chave(nome); if (!removidos.has(k)) return; removidos.delete(k); ls.set('removidos', [...removidos]); api('rj_removidos?chave=eq.' + encodeURIComponent(k), { method: 'DELETE', headers: { Prefer: 'return=minimal' } }).catch(() => {}); };
   // devolve o nome como está cadastrado (mesma grafia), ou o próprio nome
   R.canonico = n => cad.find(x => R.chave(x) === R.chave(n)) || String(n).trim();
-  R.cadastrar = nome => {
+  // manual = cadastrado à mão (volta a aparecer mesmo se tinha sido removido)
+  R.cadastrar = (nome, manual) => {
     nome = String(nome || '').trim(); if (!nome) return;
+    if (manual) restaurar(nome);
     if (cad.some(x => R.chave(x) === R.chave(nome))) return;
     cad.push(nome); cad.sort((a, b) => a.localeCompare(b, 'pt')); ls.set('cad', cad);
     const fila = ls.get('filaCad', []); fila.push(nome); ls.set('filaCad', fila); enviarFila();
@@ -88,14 +102,14 @@
       p.participantes.forEach(n => { const k = R.chave(n); t[k] = t[k] || { nome: n, j: 0, v: 0 }; t[k].j++; });
       p.vencedores.forEach(n => { const k = R.chave(n); if (t[k]) t[k].v++; });
     });
-    return Object.values(t).map(x => ({ ...x, pct: x.j ? x.v / x.j : 0 }))
+    return Object.values(t).filter(x => !R.removido(x.nome)).map(x => ({ ...x, pct: x.j ? x.v / x.j : 0 }))
       .sort((a, b) => b.pct - a.pct || b.v - a.v || b.j - a.j);
   };
 
   // chips de cadastrados (para o editor de jogadores e para a tela de entrada)
   R.htmlChips = (excluir, attr) => {
     const ex = new Set((excluir || []).map(R.chave));
-    const l = cad.filter(n => !ex.has(R.chave(n)));
+    const l = R.cadastrados().filter(n => !ex.has(R.chave(n)));
     return l.length ? `<div class="cad-chips"><span class="muted small">Cadastrados:</span>${l.map(n => `<button type="button" class="chip" ${attr}="${C.esc(n)}">+ ${C.esc(n)}</button>`).join('')}</div>` : '';
   };
 
