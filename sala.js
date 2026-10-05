@@ -94,9 +94,11 @@
       }, 20000); // 20 s: celular bloqueado/sem sinal por pouco tempo não troca o anfitrião
     }
 
+    const expulsos = new Set(); let fora = false;
     const api = {
       id, codigo: o.codigo, nome: o.nome,
       get host() { return ehHost; },
+      expulsos,
       enviar(tipo, dados) {
         const msg = { de: id, nome: o.nome, tipo, dados: dados || {} };
         if (ehHost) { if (o.onAcao) o.onAcao(msg); return; }
@@ -116,21 +118,37 @@
         ch.send({ type: 'broadcast', event: 'privado', payload: { para, dados } });
       },
       limparPrivados() { Object.keys(privados).forEach(k => delete privados[k]); },
+      // anfitrião remove alguém da sala (ele recebe o aviso e sai)
+      expulsar(pid) {
+        if (!ehHost || pid === id) return;
+        expulsos.add(pid);
+        ch.send({ type: 'broadcast', event: 'expulso', payload: { id: pid } });
+        if (o.onPresenca) o.onPresenca(api.jogadores());
+      },
       jogadores() {
-        return membros().map(m => ({ id: m.id, nome: m.nome || '?', host: !!m.host, t: m.t || 0 }))
+        return membros().filter(m => !expulsos.has(m.id)).map(m => ({ id: m.id, nome: m.nome || '?', host: !!m.host, t: m.t || 0 }))
           .sort((a, b) => (b.host - a.host) || (a.t - b.t));
       },
-      sair() { try { ch.untrack(); sb.removeChannel(ch); } catch (e) {} }
+      sair() { fora = true; try { ch.untrack(); sb.removeChannel(ch); } catch (e) {} }
     };
 
     const selo = e => { if (global.Ranking && e) global.Ranking.badge(!!(e.cfg && e.cfg.treino)); };
-    ch.on('broadcast', { event: 'estado' }, ({ payload }) => { selo(payload); if (!ehHost && o.onEstado) o.onEstado(payload); });
+    ch.on('broadcast', { event: 'estado' }, ({ payload }) => { if (fora) return; selo(payload); if (!ehHost && o.onEstado) o.onEstado(payload); });
     ch.on('broadcast', { event: 'snap' }, ({ payload }) => {
       if (ehHost || !payload) return;
       snap = payload;
       try { localStorage.setItem(chaveSnap, JSON.stringify(payload)); } catch (e) {}
     });
-    ch.on('broadcast', { event: 'privado' }, ({ payload }) => { if (!ehHost && payload && payload.para === id && o.onPrivado) o.onPrivado(payload.dados); });
+    ch.on('broadcast', { event: 'expulso' }, ({ payload }) => {
+      if (!payload) return;
+      expulsos.add(payload.id);
+      if (payload.id !== id) { if (o.onPresenca) o.onPresenca(api.jogadores()); return; }
+      api.sair(); C.pararContagem && C.pararContagem();
+      const app = document.getElementById('app');
+      if (app) app.innerHTML = `<div class="pass"><div class="emoji">🚪</div><div class="big-name" style="font-size:1.8rem">Você foi removido da sala</div><p class="muted">O anfitrião tirou você da sala ${C.esc(o.codigo)}.</p><a class="btn" href="${location.pathname}">Entrar em outra sala</a><a class="btn ghost" href="index.html">Voltar aos jogos</a></div>`;
+      const bar = document.getElementById('barraAusentes'); if (bar) bar.remove();
+    });
+    ch.on('broadcast', { event: 'privado' }, ({ payload }) => { if (fora) return; if (!ehHost && payload && payload.para === id && o.onPrivado) o.onPrivado(payload.dados); });
     ch.on('broadcast', { event: 'acao' }, ({ payload }) => {
       if (!ehHost) return;
       if (payload && payload.tipo === 'oi') {
@@ -141,7 +159,7 @@
       }
       if (o.onAcao) o.onAcao(payload);
     });
-    ch.on('presence', { event: 'sync' }, () => { avaliar(); if (o.onPresenca) o.onPresenca(api.jogadores()); });
+    ch.on('presence', { event: 'sync' }, () => { if (fora) return; avaliar(); if (o.onPresenca) o.onPresenca(api.jogadores()); });
 
     ch.subscribe(async status => {
       if (status === 'SUBSCRIBED') {
@@ -167,7 +185,7 @@
     });
     // celular bloqueado / app em segundo plano: NÃO sai da sala. Ao voltar, reconecta e pede o estado de novo.
     if (global.document) document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState !== 'visible') return;
+      if (document.visibilityState !== 'visible' || fora) return;
       setTimeout(() => {
         try { if (ch.state !== 'joined' && ch.state !== 'joining') ch.subscribe(); } catch (e) {}
         track();
@@ -175,6 +193,7 @@
         avaliar();
       }, 800);
     });
+    global.__salaAtual = api;
     return api;
   }
 
@@ -208,10 +227,14 @@
   }
   const mostrarPrazo = prazo => { if (prazo) C.contagem(prazo); else C.pararContagem(); };
 
-  const foraDesde = {}; let timerBarra = null;
+  const foraDesde = {}, jaTirados = new Set(); let timerBarra = null;
   function barraAusentes(ativos, presentes, nome, onTirar) {
     let bar = document.getElementById('barraAusentes');
     const agora = Date.now();
+    // quem o anfitrião removeu sai da partida na hora
+    const exp = global.__salaAtual && global.__salaAtual.expulsos;
+    const removidos = exp ? (ativos || []).filter(id => exp.has(id) && !jaTirados.has(id)) : [];
+    if (removidos.length) { removidos.forEach(id => jaTirados.add(id)); setTimeout(() => onTirar(removidos), 0); return; }
     (ativos || []).forEach(id => { if (presentes.some(p => p.id === id)) delete foraDesde[id]; else if (!foraDesde[id]) foraDesde[id] = agora; });
     // celular bloqueado por pouco tempo não conta como saída: só avisa depois de 30 s fora
     const aus = (ativos || []).filter(id => foraDesde[id] && agora - foraDesde[id] >= 30000);
@@ -250,9 +273,22 @@
     };
   }
 
+  // tira da partida (estado do anfitrião) quem foi removido da sala
+  function limparExpulsos(H) {
+    const exp = global.__salaAtual && global.__salaAtual.expulsos;
+    if (!H || !exp || !exp.size || !Array.isArray(H.jogadores)) return;
+    if (!H.jogadores.some(j => exp.has(j.id))) return;
+    H.jogadores = H.jogadores.filter(j => !exp.has(j.id));
+    ['placar', 'times', 'tb', 'palpites', 'resp', 'escolhas', 'acertou'].forEach(k => { if (H[k] && typeof H[k] === 'object') exp.forEach(id => delete H[k][id]); });
+  }
+  const souAnfitriao = () => !!(global.__salaAtual && global.__salaAtual.host);
+  if (global.document) document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('[data-expulsar]'); if (!b || !souAnfitriao()) return;
+    if (confirm(`Remover ${b.dataset.nome} da sala?`)) global.__salaAtual.expulsar(b.dataset.expulsar);
+  });
   function htmlJogadores(lista, meu) {
     return `<div class="card"><span class="label">Na sala (${lista.length})</span>
-      ${lista.map(j => `<div class="player-item"><span class="name">${C.esc(j.nome)}${j.id === meu ? ' <span class="muted small">(você)</span>' : ''}</span>${j.host ? '<span class="tag close">anfitrião</span>' : ''}</div>`).join('')}
+      ${lista.map(j => `<div class="player-item"><span class="name">${C.esc(j.nome)}${j.id === meu ? ' <span class="muted small">(você)</span>' : ''}</span>${j.host ? '<span class="tag close">anfitrião</span>' : ''}${souAnfitriao() && j.id !== meu ? `<button type="button" class="icon-btn" data-expulsar="${C.esc(j.id)}" data-nome="${C.esc(j.nome)}" aria-label="Remover da sala" title="Remover da sala">✕</button>` : ''}</div>`).join('')}
     </div>`;
   }
 
@@ -318,5 +354,5 @@
   const carregarHost = (jogo, codigo) => { try { return JSON.parse(localStorage.getItem(`noite:host:${jogo}:${codigo}`) || 'null'); } catch (e) { return null; } };
   const souHostDe = jogo => ss.get(`noite:souHost:${jogo}`);
 
-  global.Sala = { conectar, barraAusentes, htmlTreino, ligarTreino, htmlTimer, ligarTimer, relogio, mostrarPrazo, telaEntrada, htmlCodigo, ligarCodigo, htmlJogadores, gerarCodigo, meuId, salvarHost, carregarHost, souHostDe, linkSala };
+  global.Sala = { conectar, limparExpulsos, barraAusentes, htmlTreino, ligarTreino, htmlTimer, ligarTimer, relogio, mostrarPrazo, telaEntrada, htmlCodigo, ligarCodigo, htmlJogadores, gerarCodigo, meuId, salvarHost, carregarHost, souHostDe, linkSala };
 })(window);

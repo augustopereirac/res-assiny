@@ -39,7 +39,7 @@
   }
   const rel = Sala.relogio(() => H, k => expirar(k), 3000); // folga: dá tempo de chegar a ordem enviada automaticamente
   function expirar() { if (H.fase === 'ordenar') revelar(); }
-  function publicar() { Sala.salvarHost(JOGO, sala.codigo, H); sala.publicar(publico()); if (souHost) rel.armar(); }
+  function publicar() { if (souHost) Sala.limparExpulsos(H); Sala.salvarHost(JOGO, sala.codigo, H); sala.publicar(publico()); if (souHost) rel.armar(); }
   function iniciar() {
     const js = presentes.map(p => ({ id: p.id, nome: p.nome }));
     if (!js.length) return;

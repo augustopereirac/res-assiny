@@ -38,7 +38,7 @@
     };
   }
   const rel = Sala.relogio(() => H, k => expirar(k));
-  function publicar() { Sala.salvarHost(JOGO, sala.codigo, H); sala.publicar(publico()); if (souHost) rel.armar(); }
+  function publicar() { if (souHost) Sala.limparExpulsos(H); Sala.salvarHost(JOGO, sala.codigo, H); sala.publicar(publico()); if (souHost) rel.armar(); }
   function sortearTema() {
     const c = crit();
     const pool = F.TEMAS.filter(t => H.cfg.grupos.includes(t.grupo) && !H.usados.includes(t.id) && F.temaValido(t, c));
