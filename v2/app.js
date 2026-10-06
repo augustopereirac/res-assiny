@@ -36,12 +36,14 @@
   const lvl = n => `<span class="lvl">${[1, 2, 3].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</span>`;
   const tagRodada = () => `<span class="tag">Rodada ${estado.rodada}${estado.votacaoN === 0 ? ' de ' + estado.rodadasAlvo : ''}</span>`;
   const btnCarta = () => participo() ? `<button class="link" id="verCarta">Minha carta</button>` : '';
+  const direitaPartida = () => `<span class="row" style="gap:14px">${btnCarta()}${souHost ? '<button class="link" id="menuHost" aria-label="Opções do anfitrião" style="font-size:22px;line-height:1">⋯</button>' : ''}</span>`;
   const resumoRegras = r => `${r.grupo} · ${r.rodadas} rodada${r.rodadas > 1 ? 's' : ''} de palavras · reação ${r.reacaoSeg} s · vez ${r.vezSeg ? r.vezSeg + ' s' : 'sem tempo'} · impostor vence com ${r.teto} votações`;
   const normCodigo = c => String(c || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
   const render = html => { T.limpar(); app.innerHTML = html; ligarComuns(); };
   function ligarComuns() {
     app.querySelectorAll('[data-tema]').forEach(b => b.onclick = () => { tema = tema === 'dark' ? 'light' : 'dark'; aplicarTema(); redesenhar(); });
     const vc = document.getElementById('verCarta'); if (vc) vc.onclick = abrirCartaSheet;
+    const mh = document.getElementById('menuHost'); if (mh) mh.onclick = abrirMenuHost;
   }
   const redesenhar = () => { if (!sala) telaEntrada(); else { animKey = null; desenhar(); } };
 
@@ -288,6 +290,27 @@
     if (!H.cfg.treino && window.Ranking) Ranking.registrar(H, H.jogadores.map(j => j.nome), ganhou.map(nomeDe));
     publicar();
   }
+  // menu do anfitrião durante a partida
+  function reiniciar() { if (presentes.length < 3) return toast('Precisa de pelo menos 3 pessoas na sala.'); toast('Partida reiniciada com outra palavra.'); iniciar(); }
+  function cancelar() { toast('Partida cancelada. Todos de volta ao lobby.'); voltarLobby(); }
+  function abrirMenuHost() {
+    if (!souHost) return;
+    let s = document.getElementById('hostSheet');
+    if (!s) { s = document.createElement('div'); s.id = 'hostSheet'; s.className = 'sheet'; document.body.appendChild(s); }
+    s.innerHTML = `<div class="panel"><div class="grab"></div><span class="eyebrow">Anfitrião</span>
+      <button class="btn sec" id="hReiniciar" data-ok="0">Reiniciar com outra palavra</button>
+      <p class="fine" style="margin-top:-6px">Mesmos jogadores, palavra e impostor novos. A partida atual não pontua.</p>
+      <button class="btn sec" id="hCancelar" data-ok="0">Cancelar partida e voltar ao lobby</button>
+      <p class="fine" style="margin-top:-6px">Ninguém pontua. O placar da noite continua como está.</p>
+      <button class="btn ghost" id="hFechar">Fechar</button></div>`;
+    s.classList.add('on');
+    const fechar = () => s.classList.remove('on');
+    s.onclick = e => { if (e.target === s) fechar(); };
+    document.getElementById('hFechar').onclick = fechar;
+    const doisToques = (id, texto, fn) => { const b = document.getElementById(id); b.onclick = () => { if (b.dataset.ok === '0') { b.dataset.ok = '1'; b.classList.remove('sec'); b.classList.add('danger'); b.textContent = texto; return; } fechar(); fn(); }; };
+    doisToques('hReiniciar', 'Toque de novo para reiniciar', reiniciar);
+    doisToques('hCancelar', 'Toque de novo para cancelar', cancelar);
+  }
   function voltarLobby() { H.fase = 'lobby'; H.cartas = null; H.fim = null; H.apuracao = null; H.segue = null; H.proximo = null; prazo(null); sala.limparPrivados(); publicar(); }
   // quem saiu da sala sai da partida
   function tirar(xs) {
@@ -314,6 +337,7 @@
     const f = estado.fase;
     if (f === 'apuracao') { const k = estado.partida + '-' + estado.apuracao.n; if (animKey === k && document.getElementById('apLista')) return; animKey = k; }
     const mudou = f !== ultimaFase; ultimaFase = f;
+    if (mudou) { const hs = document.getElementById('hostSheet'); if (hs) hs.classList.remove('on'); }
     const antes = document.getElementById('pista'); const valor = antes ? antes.value : null, foco = antes && document.activeElement === antes;
     ({ lobby: telaLobby, cartas: telaCartas, vez: telaVez, reacao: telaReacao, discussao: telaDiscussao, votacao: telaVotacao, apuracao: telaApuracao, segue: telaSegue, fim: telaFim })[f]();
     const depois = document.getElementById('pista'); if (depois && valor) depois.value = valor; if (depois && foco) depois.focus();
@@ -440,7 +464,7 @@
     const faltam = estado.jogadores.filter(j => !estado.viram[j.id]);
     render(`
       <div class="tela">
-        ${topbar(`<span class="tag">Partida ${estado.partida}</span>`, 'Sua carta', `<span class="fine num">${estado.jogadores.length - faltam.length} de ${estado.jogadores.length} viram</span>`)}
+        ${topbar(`<span class="tag">Partida ${estado.partida} · ${estado.jogadores.length - faltam.length} de ${estado.jogadores.length} viram</span>`, 'Sua carta', direitaPartida())}
         ${participo() ? cartaCard() + '<p class="cap center">Toque de novo para esconder.</p>' : avisoEspectador()}
         <div class="chips" style="justify-content:center">${estado.jogadores.map(j => `<span class="chip ${estado.viram[j.id] ? 'on' : ''}">${estado.viram[j.id] ? '✓' : '…'} ${esc(voce(j.id))}</span>`).join('')}</div>
         ${souHost ? `<button class="btn space ${faltam.length ? 'sec' : ''}" id="irPalavras">${faltam.length ? `Começar as palavras (${faltam.length} ainda não viu)` : 'Todos viram. Começar as palavras'}</button>` : '<p class="cap center space">O anfitrião começa as palavras quando todos virem.</p>'}
@@ -468,7 +492,7 @@
     const f = estado.falante, minha = f === sala.id;
     render(`
       <div class="tela">
-        ${topbar(tagRodada(), 'Palavras', btnCarta())}
+        ${topbar(tagRodada(), 'Palavras', direitaPartida())}
         ${avisoEspectador()}
         <div class="tela centro" style="min-height:0;gap:12px;padding-block:14px">
           ${minha ? `<span class="eyebrow accent">Sua vez</span><h1 class="hero">Fale uma palavra</h1><p class="lead">Diga em voz alta e anote aqui. A rodada só segue depois que você enviar.</p>`
@@ -490,7 +514,7 @@
     const btn = (i, face, rot) => `<button class="emoji ${minhaReacao === i ? 'on' : ''}" data-reacao="${i}" ${posso ? '' : 'disabled'} aria-label="${rot}"><span class="face">${face}</span><span class="n">${p.r[i] || 0}</span></button>`;
     render(`
       <div class="tela">
-        ${topbar(tagRodada(), 'Palavra', btnCarta())}
+        ${topbar(tagRodada(), 'Palavra', direitaPartida())}
         <div class="tile" style="align-items:center;text-align:center;gap:14px;padding-block:34px">
           <div class="row" style="justify-content:center">${av(p.de, 'sm')}<span class="cap">${esc(voce(p.de))} disse</span></div>
           <div class="palavra">${esc(p.texto)}</div>
@@ -512,7 +536,7 @@
     const porJogador = id => estado.palavras.filter(p => p.de === id);
     render(`
       <div class="tela">
-        ${topbar('<span class="tag">Discussão</span>', 'Quem é o impostor?', btnCarta())}
+        ${topbar('<span class="tag">Discussão</span>', 'Quem é o impostor?', direitaPartida())}
         ${avisoEspectador()}
         <p class="lead">Conversem. Cada um disse isto:</p>
         <div class="stack">${estado.ordem.map(id => { const ps = porJogador(id), fora = !vivo(id); return `<div class="card" style="gap:8px"><div class="row">${av(id, fora ? 'sm fora' : 'sm')}<span class="nome grow ${fora ? 'fora' : ''}" style="font-weight:600">${esc(voce(id))}</span>${fora ? '<span class="tag">fora</span>' : ''}</div>${ps.length ? `<table class="hist">${ps.map(p => `<tr><td class="de">R${p.rodada}</td><td><strong>${esc(p.texto)}</strong></td><td class="r">${htmlR(p.r)}</td></tr>`).join('')}</table>` : '<p class="fine">Não disse nenhuma palavra.</p>'}</div>`; }).join('')}</div>
@@ -527,7 +551,7 @@
     const vs = estado.vivos, ops = vs.filter(id => id !== sala.id), jaVotei = !!(estado.votaram[sala.id] || meuVoto);
     render(`
       <div class="tela">
-        ${topbar(`<span class="tag">Votação ${estado.votacaoN}</span>`, 'Quem é o impostor?', btnCarta())}
+        ${topbar(`<span class="tag">Votação ${estado.votacaoN}</span>`, 'Quem é o impostor?', direitaPartida())}
         <p class="lead">Voto secreto, sem tempo. Ninguém vê nada até todos votarem. Empate: ninguém sai.</p>
         ${!vivo() ? (participo() ? '<div class="card center"><p class="lead">Você está fora desta votação.</p></div>' : avisoEspectador())
           : jaVotei ? `<div class="card" style="align-items:center;text-align:center;gap:6px"><span class="eyebrow">Seu voto</span>${av(meuVoto || escolha || ops[0], 'lg')}<h2>${esc(nomeDe(meuVoto || escolha || ops[0]))}</h2><p class="cap">Registrado. Aguardando os outros.</p></div>`
@@ -555,7 +579,7 @@
       : `<span class="eyebrow danger">Eliminad${j === sala.id ? 'o' : 'o'}</span><h1>${esc(voce(j))} era inocente</h1><p class="lead">${j === sala.id ? 'Você sai do jogo, mas continua vendo.' : 'Sai do jogo.'} ${a.fimDepois ? 'Resultado' : 'O impostor segue'} em <span class="num" id="apSeg"></span> s.</p>`;
     render(`
       <div class="tela">
-        ${topbar(`<span class="tag">Votação ${a.n}</span>`, 'Apuração', '')}
+        ${topbar(`<span class="tag">Votação ${a.n}</span>`, 'Apuração', direitaPartida())}
         <p class="lead" id="apTxt">Contando ${a.total} votos…</p>
         <div class="stack" id="apLista">${ids.map(id => `<div class="apRow" data-id="${esc(id)}" data-n="${a.cont[id]}">${av(id, 'sm')}<span class="nome grow" style="font-weight:600">${esc(voce(id))}</span><span class="bar"><i class="fill"></i></span><span class="n num">?</span></div>`).join('')}</div>
         <p class="fine center">Só a quantidade de votos aparece. Ninguém vê quem votou em quem.</p>
@@ -589,7 +613,7 @@
     const s = estado.segue || {}, elim = s.eliminado, imp = carta && carta.tipo === 'impostor', nivel = estado.nivelDica;
     render(`
       <div class="tela">
-        ${topbar(`<span class="tag">Votação ${s.n || estado.votacaoN}</span>`, 'Resultado', btnCarta())}
+        ${topbar(`<span class="tag">Votação ${s.n || estado.votacaoN}</span>`, 'Resultado', direitaPartida())}
         <div class="tile" style="align-items:center;text-align:center;gap:12px;padding-block:36px">
           ${elim ? av(elim, 'lg fora') : ''}
           <span class="eyebrow" style="color:var(--danger)">${s.empate ? 'Empate na votação' : esc(voce(elim)) + ' era inocente'}</span>
@@ -613,7 +637,7 @@
     const key = 'fim-' + estado.partida; if (ino && confeteKey !== key) { confeteKey = key; confete(); }
     render(`
       <div class="tela">
-        ${topbar(`<span class="tag">Partida ${estado.partida}</span>`, 'Fim', '')}
+        ${topbar(`<span class="tag">Partida ${estado.partida}</span>`, 'Fim', souHost ? '<button class="link" id="menuHost" aria-label="Opções do anfitrião" style="font-size:22px;line-height:1">⋯</button>' : '')}
         <div class="tile" style="align-items:center;text-align:center;gap:12px;padding-block:40px">
           <span class="eyebrow" style="color:${ino ? 'var(--accent)' : 'var(--danger)'}">${esc(f.motivo)}</span>
           <h1 class="hero">${ino ? 'Inocentes venceram' : 'O impostor venceu'}</h1>
