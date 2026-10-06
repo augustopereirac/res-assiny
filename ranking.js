@@ -9,7 +9,7 @@
     set(k, v) { try { localStorage.setItem('rk:' + k, JSON.stringify(v)); } catch (e) {} }
   };
   R.chave = n => C.norm(String(n || '')).replace(/[^a-z0-9]+/g, ' ').trim();
-  R.JOGOS = { alex: 'Alex', nolimite: 'No Limite', top100: 'Top 100', qtl: 'Quem Tava Lá', impostor: 'Impostor', montatime: 'Monta o Time', carreira: 'De Quem É a Carreira?', ordene: 'Ordene a Carreira' };
+  R.JOGOS = { alex: 'Alex', mimica: 'Mímica', nolimite: 'No Limite', top100: 'Top 100', qtl: 'Quem Tava Lá', impostor: 'Impostor', montatime: 'Monta o Time', carreira: 'De Quem É a Carreira?', ordene: 'Ordene a Carreira' };
 
   const api = (path, opts = {}) => fetch(cfg.supabaseUrl + '/rest/v1/' + path, {
     ...opts,
@@ -29,21 +29,34 @@
       .catch(() => cad);
     return carregou;
   };
-  // remove do cadastro e esconde do ranking (as partidas antigas continuam valendo para os outros)
+  // ---------- administrador ----------
+  // Remover/restaurar só com a senha do administrador (conferida no Supabase, função rj_remover / rj_restaurar).
+  const rpc = (fn, body) => api('rpc/' + fn, { method: 'POST', body: JSON.stringify(body) });
+  R.senhaAdmin = () => ls.get('admin', '');
+  R.sairAdmin = () => ls.set('admin', '');
+  R.entrarAdmin = senha => rpc('rj_admin_ok', { senha }).then(ok => { if (ok) ls.set('admin', senha); return !!ok; });
+  R.ehAdmin = () => !!R.senhaAdmin();
+  // remove do cadastro e esconde do ranking (as partidas continuam guardadas; dá para restaurar)
   R.remover = nome => {
     const k = R.chave(nome);
-    removidos.add(k); ls.set('removidos', [...removidos]);
-    cad = cad.filter(n => R.chave(n) !== k); ls.set('cad', cad);
-    return api('rj_removidos?on_conflict=chave', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify([{ chave: k, nome }]) })
-      .then(() => api('rj_jogadores?chave=eq.' + encodeURIComponent(k), { method: 'DELETE', headers: { Prefer: 'return=minimal' } }).catch(() => {}));
+    return rpc('rj_remover', { senha: R.senhaAdmin(), p_chave: k, p_nome: nome }).then(() => {
+      removidos.add(k); ls.set('removidos', [...removidos]);
+      cad = cad.filter(n => R.chave(n) !== k); ls.set('cad', cad);
+    });
   };
-  const restaurar = nome => { const k = R.chave(nome); if (!removidos.has(k)) return; removidos.delete(k); ls.set('removidos', [...removidos]); api('rj_removidos?chave=eq.' + encodeURIComponent(k), { method: 'DELETE', headers: { Prefer: 'return=minimal' } }).catch(() => {}); };
+  R.restaurar = nome => {
+    const k = R.chave(nome);
+    return rpc('rj_restaurar', { senha: R.senhaAdmin(), p_chave: k, p_nome: nome }).then(() => {
+      removidos.delete(k); ls.set('removidos', [...removidos]);
+      if (!cad.some(x => R.chave(x) === k)) { cad.push(nome); cad.sort((x, y) => x.localeCompare(y, 'pt')); ls.set('cad', cad); }
+    });
+  };
+  R.listaRemovidos = () => api('rj_removidos?select=chave,nome,criado&order=criado.desc&limit=1000');
   // devolve o nome como está cadastrado (mesma grafia), ou o próprio nome
   R.canonico = n => cad.find(x => R.chave(x) === R.chave(n)) || String(n).trim();
-  // manual = cadastrado à mão (volta a aparecer mesmo se tinha sido removido)
+  // quem foi removido só volta pelo administrador (R.restaurar)
   R.cadastrar = (nome, manual) => {
     nome = String(nome || '').trim(); if (!nome) return;
-    if (manual) restaurar(nome);
     if (cad.some(x => R.chave(x) === R.chave(nome))) return;
     cad.push(nome); cad.sort((a, b) => a.localeCompare(b, 'pt')); ls.set('cad', cad);
     const fila = ls.get('filaCad', []); fila.push(nome); ls.set('filaCad', fila); enviarFila();
