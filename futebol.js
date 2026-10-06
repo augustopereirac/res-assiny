@@ -26,16 +26,31 @@
   F.descPos = j => j.pos ? j.pos.split('').map(p => POSN[p]).join('/') : 'posição ?';
 
   // ---------- busca com sugestões ----------
-  F.buscar = (texto, n = 8, filtro) => {
+  // Busca: cada palavra digitada precisa bater com o nome OU com um clube do jogador
+  // (ex.: "alex cruzeiro"). Pelo menos uma palavra tem que bater com o nome.
+  // Ordem: fama, com bônus para quem jogou no Brasil (o grupo é brasileiro).
+  F.buscar = (texto, n = 10, filtro) => {
     const q = C.norm(texto);
     if (q.length < 2) return [];
-    const toks = q.split(' ');
-    const ok = j => {
+    const toks = q.split(' ').filter(Boolean);
+    const res = [];
+    for (const j of J) {
+      if (filtro && !filtro(j)) continue;
       const words = (j.k1 + ' ' + j.k2).split(' ');
-      return toks.every(t => words.some(w => w.startsWith(t)));
-    };
-    return J.filter(j => (!filtro || filtro(j)) && ok(j)).sort((a, b) => b.fama - a.fama).slice(0, n);
+      let noNome = 0, ok = true;
+      for (const t of toks) {
+        if (words.some(w => w.startsWith(t))) { noNome++; continue; }
+        if (t.length >= 3) { j.kc = j.kc || C.norm(j.car.map(c => c.nome).join(' ')).split(' '); if (j.kc.some(w => w.startsWith(t))) continue; }
+        ok = false; break;
+      }
+      if (!ok || !noNome) continue;
+      const exato = toks.filter(t => words.includes(t)).length * 20 + (words[0] === toks[0] ? 5 : 0); // palavra inteira vale mais que começo de palavra
+      res.push([j, j.fama + (j.brasil ? 15 : 0) + exato]);
+    }
+    return res.sort((a, b) => b[1] - a[1]).slice(0, n).map(x => x[0]);
   };
+  // clubes principais (para diferenciar nomes iguais nas sugestões)
+  F.clubesResumo = j => { const v = []; j.car.forEach(c => { if (!v.includes(c.nome)) v.push(c.nome); }); return v.length > 3 ? v.slice(0, 3).join(', ') + '…' : v.join(', '); };
 
   // HTML de um campo de busca. Depois de renderizar, chame F.ligarBusca(idBase, onEscolha)
   F.htmlBusca = (idBase, placeholder) => `
@@ -52,8 +67,8 @@
     let atual = null, lista = [], sel = 0;
     const marcar = () => box.querySelectorAll('.sug').forEach((b, i) => b.classList.toggle('sel', i === sel));
     const mostrar = () => {
-      lista = F.buscar(inp.value, 8, filtro); sel = 0;
-      box.innerHTML = lista.map(j => `<button type="button" class="sug" data-id="${j.id}"><strong>${esc(j.nome)}</strong><span class="muted small">${esc(F.descPos(j))}${j.ano ? ' · ' + j.ano : ''}</span></button>`).join('')
+      lista = F.buscar(inp.value, 10, filtro); sel = 0;
+      box.innerHTML = lista.map(j => `<button type="button" class="sug" data-id="${j.id}"><strong>${esc(j.nome)}</strong><span class="muted small">${esc(F.descPos(j))}${j.ano ? ' · ' + j.ano : ''} · ${esc(F.clubesResumo(j))}</span></button>`).join('')
         || (C.norm(inp.value).length >= 2 ? '<div class="muted small" style="padding:8px 4px">Nenhum jogador com esse nome no banco.</div>' : '');
       box.querySelectorAll('.sug').forEach((b, i) => { b.onclick = () => escolher(F.porId[b.dataset.id]); b.onmouseenter = () => { sel = i; marcar(); }; });
       marcar();
