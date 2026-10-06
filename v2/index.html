@@ -86,21 +86,18 @@ p{margin:0}
 .linha{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--hair);min-width:0}
 .linha:last-child{border-bottom:0}
 .linha .nome{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.linha .nome.fora{color:var(--muted2);text-decoration:line-through;font-weight:400}
 
 .av{width:40px;height:40px;border-radius:50%;background:var(--card2);color:var(--ink);display:grid;place-items:center;font-weight:600;font-size:15px;flex-shrink:0;border:1px solid var(--hair);letter-spacing:0}
 .av.sm{width:28px;height:28px;font-size:12px}
 .av.lg{width:64px;height:64px;font-size:24px}
 .av.xl{width:96px;height:96px;font-size:36px}
 .av.eu{outline:2px solid var(--accent);outline-offset:2px}
-.av.fora{opacity:.35;text-decoration:line-through}
-.avs{display:flex}
-.avs .av{margin-left:-8px;border:2px solid var(--bg)}
-.avs .av:first-child{margin-left:0}
+.av.fora{opacity:.35}
 
 .tag{font-size:12px;font-weight:600;letter-spacing:-0.12px;padding:3px 9px;border-radius:9999px;background:var(--card2);color:var(--muted);border:1px solid var(--hair);white-space:nowrap}
 .tag.accent{color:var(--accent);border-color:var(--accent)}
 .tag.danger{color:var(--danger);border-color:var(--danger)}
-.tag.ink{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 
 .ring{position:relative;display:grid;place-items:center;margin:0 auto}
 .ring svg{position:absolute;inset:0;transform:rotate(-90deg);width:100%;height:100%}
@@ -123,23 +120,20 @@ p{margin:0}
 .voto.on .rad{border-color:var(--accent)}
 .voto.on .rad::after{content:"";width:12px;height:12px;border-radius:50%;background:var(--accent)}
 
-.vgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.vcard{perspective:800px;height:118px}
-.vcard .inner{position:relative;width:100%;height:100%;transition:transform .65s cubic-bezier(.2,.7,.2,1);transform-style:preserve-3d}
-.vcard.on .inner{transform:rotateY(180deg)}
-.vcard .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:14px;border:1px solid var(--hair);background:var(--card2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px}
-.vcard .f2{transform:rotateY(180deg);background:var(--card)}
-.vcard .q{font-size:30px;font-weight:600;color:var(--muted2)}
-.vcard .cap{text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.vcard.alvo .f2{border-color:var(--accent)}
-.vcard.alvo.ruim .f2{border-color:var(--danger)}
-.tally{display:flex;flex-direction:column;gap:10px}
-.tally .it{display:flex;align-items:center;gap:10px}
-.tally .bar{flex:1;height:8px;border-radius:9999px;background:var(--card2);overflow:hidden}
-.tally .fill{height:100%;width:0;background:var(--accent);transition:width .45s ease}
-.tally .it.lead .fill{background:var(--danger)}
-.tally .it.lead.bom .fill{background:var(--accent)}
-.tally .n{width:20px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+/* apuração: revela nome por nome, só a quantidade de votos */
+.apRow{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;border:1px solid var(--hair);background:var(--card2);transition:border-color .35s ease,transform .35s ease,opacity .35s}
+.apRow .bar{flex:1;height:8px;border-radius:9999px;background:var(--card);overflow:hidden}
+.apRow .fill{display:block;height:100%;width:0;background:var(--muted2);transition:width .5s ease}
+.apRow .n{width:30px;text-align:right;font-weight:600;font-size:22px;letter-spacing:-0.4px;color:var(--muted2)}
+.apRow.on .n{color:var(--ink)}
+.apRow.on .fill{background:var(--accent)}
+.apRow.tensao{animation:pulso 1s ease-in-out infinite}
+@keyframes pulso{50%{border-color:var(--ink);transform:scale(1.02)}}
+.apRow.lead{border-color:var(--danger);transform:scale(1.03)}
+.apRow.lead .fill{background:var(--danger)}
+.apRow.lead.bom{border-color:var(--accent)}
+.apRow.lead.bom .fill{background:var(--accent)}
+.apRow.zero{opacity:.55}
 .veredito{opacity:0;transform:translateY(12px);transition:opacity .5s ease,transform .5s ease}
 .veredito.on{opacity:1;transform:none}
 
@@ -166,7 +160,7 @@ table.rk .pos{color:var(--muted2);font-weight:600;width:28px;text-align:left}
 .menu button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:11px 12px;border-radius:10px;border:1px solid var(--hair);background:var(--card2);color:var(--ink);font:inherit;cursor:pointer}
 .menu button.danger{color:var(--danger)}
 
-.carta{min-height:280px;cursor:pointer;justify-content:center;align-items:center;text-align:center;perspective:900px}
+.carta{min-height:280px;cursor:pointer;justify-content:center;align-items:center;text-align:center}
 .carta .capa{display:flex;flex-direction:column;align-items:center;gap:8px}
 .carta .olho{width:56px;height:56px;border-radius:50%;border:1px solid var(--hair);display:grid;place-items:center}
 
@@ -206,7 +200,7 @@ table.rk .pos{color:var(--muted2);font-weight:600;width:28px;text-align:left}
     <div class="opt"><span class="cap">Tema</span><div class="seg" id="optTema"><button data-v="dark">Escuro</button><button data-v="light">Claro</button></div></div>
     <div class="opt"><span class="cap">Meu papel</span><div class="seg" id="optPapel"><button data-v="inocente">Inocente</button><button data-v="impostor">Impostor</button></div></div>
     <div class="opt"><span class="cap">Anfitrião</span><div class="seg" id="optHost"><button data-v="1">Eu</button><button data-v="0">Outro</button></div></div>
-    <div class="opt"><span class="cap">Apuração</span><div class="seg" id="optApur"><button data-v="inocente">Saiu inocente</button><button data-v="impostor">Pegou impostor</button></div></div>
+    <div class="opt"><span class="cap">Apuração</span><div class="seg" id="optApur"><button data-v="inocente">Sai inocente</button><button data-v="impostor">Pega impostor</button></div></div>
     <div class="opt"><span class="cap">Fim</span><div class="seg" id="optFim"><button data-v="inocentes">Inocentes</button><button data-v="impostor">Impostor</button></div></div>
   </div>
 </div>
@@ -218,20 +212,50 @@ table.rk .pos{color:var(--muted2);font-weight:600;width:28px;text-align:left}
   const S = {
     tema: ls.get('tema', 'dark'), papel: 'inocente', host: true, apur: 'inocente', fim: 'inocentes',
     visitante: false, nome: 'Marcos', tela: 'login', voto: null, reacao: null, reacaoDe: 'dani', minhaPalavra: '', cartaAberta: false, menuAberto: null, semLogin: false,
+    eliminados: [], votacaoN: 1, rodadaN: 1, ultimo: null,
     regras: { tema: 'Futebol', cats: ['Jogadores Brasileiros', 'Jogadores Estrangeiros', 'Clubes'], impostores: 1, rodadas: 2, reacaoSeg: 10, vezSeg: 60, teto: 3 }
   };
   const CATS = { Futebol: ['Jogadores Brasileiros', 'Jogadores Estrangeiros', 'Clubes', 'Estádios e Competições', 'Técnicos'], Geral: ['Objetos', 'Comidas e Bebidas', 'Lugares', 'Famosos', 'Filmes e Séries', 'Animais', 'Profissões', 'Marcas', 'Esportes e Atividades'] };
   const J = [
     { id: 'eu', nome: 'Marcos' }, { id: 'aug', nome: 'Augusto' }, { id: 'tucho', nome: 'Tucho' },
-    { id: 'dvd', nome: 'Dvd' }, { id: 'dani', nome: 'Dani' }, { id: 'isaac', nome: 'Isaac' }
+    { id: 'dvd', nome: 'Dvd' }, { id: 'dani', nome: 'Dani', fem: true }, { id: 'isaac', nome: 'Isaac' }
   ];
+  const IMPOSTOR = 'tucho';
   const byId = id => J.find(j => j.id === id);
   const hostId = () => S.host ? 'eu' : 'aug';
-  const ORDEM = ['tucho', 'aug', 'dani', 'isaac', 'eu', 'dvd'];
-  const PALAVRAS = { tucho: ['Luvas'], aug: ['Itália'], dani: ['Capitão'], isaac: ['Pênalti'], eu: [], dvd: [] };
-  const REACOES = { tucho: [3, 1, 1], aug: [4, 0, 1], dani: [2, 2, 1], isaac: [1, 3, 1] };
+  const ORDEM = ['tucho', 'aug', 'isaac', 'dani', 'eu', 'dvd'];
+  // palavras por rodada (quem já falou naquela rodada)
+  const PAL = [
+    { tucho: 'Luvas', aug: 'Itália', isaac: 'Pênalti', dani: 'Capitão', dvd: 'Veterano' },
+    { tucho: 'Camisa 1', aug: 'Turim', isaac: 'Parma', dani: 'Faixa', dvd: 'Lenda' },
+    { tucho: 'Muralha', aug: 'Bianconeri', isaac: 'Copa 2006', dani: 'Número 1', dvd: 'Quarenta' }
+  ];
+  const REAC = { tucho: [3, 1, 1], aug: [4, 0, 1], dani: [2, 2, 1], isaac: [1, 3, 1], dvd: [2, 1, 2], eu: [0, 0, 0] };
   const SEGREDO = { palavra: 'Buffon', cat: 'Jogadores Estrangeiros', dicas: ['Goleiro', 'Goleiro italiano, campeão do mundo em 2006', 'Lenda da Juventus, apelido Gigi, jogou até os 45 anos'] };
-  const VOTOS = () => ({ tucho: 'dani', aug: 'dani', dani: 'isaac', isaac: 'dani', eu: S.voto || 'dani', dvd: 'tucho' });
+
+  const vivo = id => !S.eliminados.includes(id);
+  const vivos = () => J.filter(j => vivo(j.id));
+  const alvo = () => S.apur === 'impostor' ? IMPOSTOR : (['dani', 'isaac', 'dvd', 'aug'].find(vivo) || 'dani');
+  const falante = () => ['dani', 'isaac', 'aug', 'tucho'].find(vivo) || 'aug';
+  const rodadaPal = () => PAL[Math.min(S.rodadaN, PAL.length) - 1];
+  const palavraDe = id => id === 'eu' ? (S.minhaPalavra || 'Longevo') : (rodadaPal()[id] || '');
+  const jaFalou = id => ORDEM.indexOf(id) < ORDEM.indexOf(falante());
+  function votos() {
+    const vs = vivos().map(j => j.id), a = alvo(), out = {}, cand = vs.filter(id => id !== a && id !== 'eu');
+    let n = 0, k = 0;
+    vs.forEach(v => {
+      if (v === 'eu') out[v] = S.voto && vivo(S.voto) && S.voto !== 'eu' ? S.voto : a;
+      else if (v === a || n >= 3) { let o = cand[k % cand.length]; if (o === v) o = cand[(k + 1) % cand.length]; k++; out[v] = o || a; }
+      else { out[v] = a; n++; }
+    });
+    return out;
+  }
+  function apurar() {
+    const vt = votos(), cont = {}; vivos().forEach(j => cont[j.id] = 0); Object.values(vt).forEach(v => cont[v]++);
+    const max = Math.max(...Object.values(cont)), top = Object.keys(cont).filter(k => cont[k] === max);
+    const id = top.length === 1 ? top[0] : null;
+    return { cont, total: Object.keys(vt).length, top, tipo: !id ? 'empate' : id === IMPOSTOR ? 'impostor' : 'eliminado', id };
+  }
 
   const app = document.getElementById('app');
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -241,6 +265,7 @@ table.rk .pos{color:var(--muted2);font-weight:600;width:28px;text-align:left}
   const ini = n => n.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
   const av = (j, cls) => `<span class="av ${cls || ''} ${j.id === 'eu' ? 'eu' : ''}" aria-hidden="true">${esc(ini(j.nome))}</span>`;
   const nomeDe = j => j.id === 'eu' ? 'Você' : j.nome;
+  const gen = (j, m, f) => j.fem ? f : m;
 
   // ---------- componentes ----------
   const topbar = (esq, titulo, dir) => `<div class="topbar"><span class="l">${esq || ''}</span><span class="t">${titulo || ''}</span><span class="r">${dir || ''}</span></div>`;
@@ -260,6 +285,7 @@ table.rk .pos{color:var(--muted2);font-weight:600;width:28px;text-align:left}
   const lvl = n => `<span class="lvl" aria-label="Dica nível ${n} de 3">${[1, 2, 3].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</span>`;
   const gLogo = '<svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.7 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 2.9-2.2 5.4-4.7 7.1l7.6 5.9c4.4-4.1 6.9-10.1 6.9-17z"/><path fill="#FBBC05" d="M10.5 28.6c-.5-1.5-.8-3-.8-4.6s.3-3.1.8-4.6l-7.9-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.6-5.9c-2.1 1.4-4.7 2.2-7.6 2.2-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>';
   const resumoRegras = () => { const r = S.regras; return `${r.tema} · ${r.rodadas} rodada${r.rodadas > 1 ? 's' : ''} de palavras · reação ${r.reacaoSeg} s · vez ${r.vezSeg ? r.vezSeg + ' s' : 'sem tempo'} · impostor vence com ${r.teto} votações`; };
+  const listaJogadores = () => `<div class="card flat">${J.map(j => `<div class="linha">${av(j, 'sm ' + (vivo(j.id) ? '' : 'fora'))}<span class="nome grow ${vivo(j.id) ? '' : 'fora'}">${esc(nomeDe(j))}</span>${vivo(j.id) ? '' : `<span class="tag">eliminad${gen(j, 'o', 'a')}</span>`}</div>`).join('')}</div>`;
   function qrFake(code) {
     const c = document.getElementById('qr'); if (!c) return;
     const n = 25, ctx = c.getContext('2d'); c.width = n; c.height = n; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, n, n); ctx.fillStyle = '#1d1d1f';
@@ -290,7 +316,9 @@ table.rk .pos{color:var(--muted2);font-weight:600;width:28px;text-align:left}
   const R = {};
 
   R.login = () => `
-    <div class="tela centro">
+    <div class="tela">
+      ${topbar('<a class="link" href="../index.html">‹ Jogos</a>', '', '<span class="tag">v2 · prévia</span>')}
+      <div class="tela centro" style="min-height:0;flex:1">
       <div class="stack" style="gap:6px">
         <span class="eyebrow">Res Assiny</span>
         <h1 class="hero">Impostor</h1>
@@ -307,6 +335,7 @@ table.rk .pos{color:var(--muted2);font-weight:600;width:28px;text-align:left}
           </div>` : `<button class="btn ghost" data-set="semLogin:1" data-rerender="1">Jogar sem login</button>`}
       </div>
       <p class="fine" style="margin-top:24px">Com a conta Google seu nome, foto e histórico ficam salvos.</p>
+      </div>
     </div>`;
 
   R.inicio = () => `
@@ -432,28 +461,35 @@ table.rk .pos{color:var(--muted2);font-weight:600;width:28px;text-align:left}
     </div>`;
   };
 
+  const tagRodada = () => `<span class="tag">Rodada ${S.rodadaN}${S.votacaoN === 1 ? ' de ' + S.regras.rodadas : ''}</span>`;
+  const linhaPalavras = (destacar) => `<div class="card flat">${ORDEM.map(id => {
+    const j = byId(id);
+    if (!vivo(id)) return `<div class="linha">${av(j, 'sm fora')}<span class="nome grow fora">${esc(nomeDe(j))}</span><span class="tag">fora</span></div>`;
+    const w = jaFalou(id) ? palavraDe(id) : '';
+    const estado = w ? `<strong>${esc(w)}</strong><span class="fine num">${REAC[id][0]} 👍 ${REAC[id][1]} 👎</span>` : id === destacar ? '<span class="tag accent">falando</span>' : '<span class="fine">aguardando</span>';
+    return `<div class="linha">${av(j, 'sm')}<span class="nome grow">${esc(nomeDe(j))}</span>${estado}</div>`;
+  }).join('')}</div>`;
+
   R['vez-outro'] = () => {
-    const vez = byId('dani'), seg = S.regras.vezSeg;
+    const vez = byId(falante()), seg = S.regras.vezSeg;
     return `
     <div class="tela">
-      ${topbar('<span class="tag">Rodada 1 de 2</span>', 'Palavras', `<button class="link" data-carta="1">Minha carta</button>`)}
+      ${topbar(tagRodada(), 'Palavras', `<button class="link" data-carta="1">Minha carta</button>`)}
       <div class="tela centro" style="min-height:0;gap:14px;padding-block:18px">
         <span class="eyebrow">Agora é a vez de</span>
         ${av(vez, 'xl')}
         <h1 class="hero">${esc(vez.nome)}</h1>
-        <p class="lead">Ela fala a palavra e digita aqui. Fique de olho.</p>
+        <p class="lead">Fala a palavra em voz alta e anota aqui. Fique de olho.</p>
         ${seg ? ring(seg) : '<span class="tag">Sem tempo</span>'}
-        ${S.host ? `<button class="btn sm" data-go="vez-minha" data-toast="Dani pulada">Pular ${esc(vez.nome)}</button>` : ''}
+        ${S.host ? `<button class="btn sm" data-go="vez-minha" data-toast="${esc(vez.nome)} pulad${gen(vez, 'o', 'a')}">Pular ${esc(vez.nome)}</button>` : ''}
       </div>
-      <div class="card flat">
-        ${ORDEM.map(id => { const j = byId(id), w = PALAVRAS[id][0]; return `<div class="linha">${av(j, 'sm')}<span class="nome grow">${esc(nomeDe(j))}</span>${w ? `<strong>${esc(w)}</strong><span class="fine num">${REACOES[id][0]} 👍 ${REACOES[id][1]} 👎</span>` : id === 'dani' ? '<span class="tag accent">falando</span>' : '<span class="fine">aguardando</span>'}</div>`; }).join('')}
-      </div>
+      ${linhaPalavras(vez.id)}
     </div>`;
   };
 
   R['vez-minha'] = () => `
     <div class="tela">
-      ${topbar('<span class="tag">Rodada 1 de 2</span>', 'Palavras', `<button class="link" data-carta="1">Minha carta</button>`)}
+      ${topbar(tagRodada(), 'Palavras', `<button class="link" data-carta="1">Minha carta</button>`)}
       <div class="tela centro" style="min-height:0;gap:12px;padding-block:18px">
         <span class="eyebrow accent">Sua vez</span>
         <h1 class="hero">Fale uma palavra</h1>
@@ -461,7 +497,7 @@ table.rk .pos{color:var(--muted2);font-weight:600;width:28px;text-align:left}
         ${S.regras.vezSeg ? ring(S.regras.vezSeg) : '<span class="tag">Sem tempo</span>'}
       </div>
       <div class="card flat">
-        ${ORDEM.filter(id => PALAVRAS[id][0]).map(id => { const j = byId(id); return `<div class="linha">${av(j, 'sm')}<span class="nome grow">${esc(nomeDe(j))}</span><strong>${esc(PALAVRAS[id][0])}</strong></div>`; }).join('')}
+        ${ORDEM.filter(id => vivo(id) && id !== 'eu' && ORDEM.indexOf(id) < ORDEM.indexOf('eu')).map(id => { const j = byId(id); return `<div class="linha">${av(j, 'sm')}<span class="nome grow">${esc(nomeDe(j))}</span><strong>${esc(palavraDe(id))}</strong></div>`; }).join('')}
       </div>
       <form class="card space" id="fPalavra" style="gap:10px">
         <div class="row"><input class="field grow" id="minha" maxlength="30" autocomplete="off" placeholder="Sua palavra" value="${esc(S.minhaPalavra)}"><button class="btn" type="submit" style="width:auto;padding-inline:22px">Enviar</button></div>
@@ -470,15 +506,15 @@ table.rk .pos{color:var(--muted2);font-weight:600;width:28px;text-align:left}
     </div>`;
 
   R.reacao = () => {
-    const de = byId(S.reacaoDe), palavra = S.reacaoDe === 'eu' ? (S.minhaPalavra || 'Longevo') : PALAVRAS[S.reacaoDe][0];
-    const minha = S.reacaoDe === 'eu';
-    const r = REACOES[S.reacaoDe] || [0, 0, 0];
-    const btn = (i, face, rot) => `<button class="emoji ${S.reacao === i ? 'on' : ''}" data-reacao="${i}" ${minha ? 'disabled' : ''} aria-label="${rot}"><span class="face">${face}</span><span class="n" id="n${i}">${r[i]}</span></button>`;
+    const de = byId(S.reacaoDe) || byId(falante()), palavra = palavraDe(de.id);
+    const minha = de.id === 'eu';
+    const r = REAC[de.id] || [0, 0, 0];
+    const btn = (i, face, rot) => `<button class="emoji ${S.reacao === i ? 'on' : ''}" data-reacao="${i}" ${minha ? 'disabled' : ''} aria-label="${rot}"><span class="face">${face}</span><span class="n" id="n${i}">${minha ? 0 : r[i]}</span></button>`;
     return `
     <div class="tela">
-      ${topbar('<span class="tag">Rodada 1 de 2</span>', 'Palavra', `<button class="link" data-carta="1">Minha carta</button>`)}
+      ${topbar(tagRodada(), 'Palavra', `<button class="link" data-carta="1">Minha carta</button>`)}
       <div class="tile" style="align-items:center;text-align:center;gap:14px;padding-block:34px">
-        <div class="row" style="justify-content:center">${av(de, 'sm')}<span class="cap">${esc(nomeDe(de))} ${minha ? 'disse' : 'disse'}</span></div>
+        <div class="row" style="justify-content:center">${av(de, 'sm')}<span class="cap">${esc(nomeDe(de))} disse</span></div>
         <div class="palavra">${esc(palavra)}</div>
         ${ring(S.regras.reacaoSeg, 64)}
       </div>
@@ -487,87 +523,91 @@ table.rk .pos{color:var(--muted2);font-weight:600;width:28px;text-align:left}
         <div class="emojis">${btn(0, '👍', 'Curti')}${btn(1, '👎', 'Suspeito')}${btn(2, '😐', 'Tanto faz')}</div>
         <p class="fine">Só a contagem aparece. Ninguém vê quem reagiu.</p>
       </div>
-      <p class="cap space" style="text-align:center">Em seguida: ${S.reacaoDe === 'eu' ? 'votação' : 'sua vez'}</p>
+      <p class="cap space" style="text-align:center">Em seguida: ${minha ? 'votação' : 'sua vez'}</p>
     </div>`;
   };
 
-  R.votacao = () => `
+  R.votacao = () => {
+    const vs = vivos();
+    return `
     <div class="tela">
-      ${topbar('<span class="tag">Votação 1</span>', 'Quem é o impostor?', `<button class="link" data-carta="1">Minha carta</button>`)}
+      ${topbar(`<span class="tag">Votação ${S.votacaoN}</span>`, 'Quem é o impostor?', `<button class="link" data-carta="1">Minha carta</button>`)}
       <p class="lead">Voto secreto. Ninguém vê nada até todos votarem. Empate: ninguém sai.</p>
       <div class="stack">
-        ${J.filter(j => j.id !== 'eu').map(j => { const ws = PALAVRAS[j.id]; return `<button class="voto ${S.voto === j.id ? 'on' : ''}" data-voto="${j.id}">${av(j)}<span class="stack grow" style="gap:0"><span class="nome">${esc(j.nome)}</span><span class="fine">${ws[0] ? esc(ws[0]) + ' · ' + REACOES[j.id][0] + ' 👍 ' + REACOES[j.id][1] + ' 👎' : 'ainda sem palavra'}</span></span><span class="rad"></span></button>`; }).join('')}
+        ${vs.filter(j => j.id !== 'eu').map(j => { const w = palavraDe(j.id); return `<button class="voto ${S.voto === j.id ? 'on' : ''}" data-voto="${j.id}">${av(j)}<span class="stack grow" style="gap:0"><span class="nome">${esc(j.nome)}</span><span class="fine">${w ? esc(w) + ' · ' + REAC[j.id][0] + ' 👍 ' + REAC[j.id][1] + ' 👎' : 'ainda sem palavra'}</span></span><span class="rad"></span></button>`; }).join('')}
       </div>
-      <div class="chips" style="justify-content:center">${J.map((j, i) => `<span class="chip ${i === 1 || i === 2 ? 'on' : ''}">${i === 1 || i === 2 ? '✓' : '…'} ${esc(nomeDe(j))}</span>`).join('')}</div>
+      <div class="chips" style="justify-content:center">${vs.map(j => `<span class="chip ${['aug', 'tucho'].includes(j.id) ? 'on' : ''}">${['aug', 'tucho'].includes(j.id) ? '✓' : '…'} ${esc(nomeDe(j))}</span>`).join('')}</div>
       <button class="btn space" data-go="votacao-espera" ${S.voto ? '' : 'disabled'}>${S.voto ? 'Confirmar voto em ' + esc(byId(S.voto).nome) : 'Escolha alguém'}</button>
     </div>`;
+  };
 
-  R['votacao-espera'] = () => `
+  R['votacao-espera'] = () => {
+    const vs = vivos(), ja = ['eu', 'aug', 'tucho'].filter(vivo), v = byId(S.voto && vivo(S.voto) ? S.voto : alvo());
+    return `
     <div class="tela">
-      ${topbar('<span class="tag">Votação 1</span>', 'Quem é o impostor?', '')}
+      ${topbar(`<span class="tag">Votação ${S.votacaoN}</span>`, 'Quem é o impostor?', '')}
       <div class="tela centro" style="min-height:0;gap:10px;padding-block:28px">
         <span class="eyebrow">Seu voto</span>
-        ${av(byId(S.voto || 'dani'), 'xl')}
-        <h1>${esc(byId(S.voto || 'dani').nome)}</h1>
+        ${av(v, 'xl')}
+        <h1>${esc(v.nome)}</h1>
         <p class="lead">Registrado. Aguardando os outros.</p>
       </div>
       <div class="card" style="align-items:center">
-        <strong class="num" id="votCont">3 de 6 votaram</strong>
-        <div class="chips" style="justify-content:center" id="votChips">${J.map((j, i) => `<span class="chip ${i <= 2 ? 'on' : ''}" data-vc="${j.id}">${i <= 2 ? '✓' : '…'} ${esc(nomeDe(j))}</span>`).join('')}</div>
+        <strong class="num" id="votCont">${ja.length} de ${vs.length} votaram</strong>
+        <div class="chips" style="justify-content:center" id="votChips">${vs.map(j => `<span class="chip ${ja.includes(j.id) ? 'on' : ''}" data-vc="${j.id}">${ja.includes(j.id) ? '✓' : '…'} ${esc(nomeDe(j))}</span>`).join('')}</div>
       </div>
       <p class="fine space" style="text-align:center">A apuração começa sozinha quando o último votar.</p>
     </div>`;
+  };
 
   R.apuracao = () => {
-    const votos = VOTOS(), votantes = J;
-    const cont = {}; Object.values(votos).forEach(v => cont[v] = (cont[v] || 0) + 1);
-    const ordem = Object.keys(cont).sort((a, b) => cont[b] - cont[a]);
-    const pegou = S.apur === 'impostor';
+    const a = apurar(); S.ultimo = { tipo: a.tipo, id: a.id };
+    const j = a.id ? byId(a.id) : null;
+    const veredito = a.tipo === 'impostor'
+      ? `<span class="eyebrow accent">Pegaram o impostor</span><h1>${esc(j.nome)} era o impostor</h1><p class="lead">A palavra era ${esc(SEGREDO.palavra)}. Inocentes venceram.</p><button class="btn" data-go="fim" data-set="fim:inocentes">Ver resultado</button>`
+      : a.tipo === 'empate'
+      ? `<span class="eyebrow">Empate</span><h1>Ninguém sai</h1><p class="lead">Mais uma rodada de palavras e nova votação.</p><button class="btn sec" data-go="impostor-segue" data-aplicar="1">Continuar</button>`
+      : `<span class="eyebrow danger">Eliminad${gen(j, 'o', 'a')}</span><h1>${esc(j.nome)} era inocente</h1><p class="lead">Sai do jogo. O impostor segue entre vocês.</p><button class="btn sec" data-go="impostor-segue" data-aplicar="1">Continuar</button>`;
     return `
     <div class="tela">
-      ${topbar('<span class="tag">Votação 1</span>', 'Apuração', `<button class="link" data-go="apuracao">Repetir</button>`)}
-      <p class="lead" id="apTxt">Virando os votos…</p>
-      <div class="vgrid">${votantes.map(v => { const alvo = byId(votos[v.id]); return `<div class="vcard" data-vc="${v.id}" data-alvo="${alvo.id}"><div class="inner"><div class="face f1">${av(v, 'sm')}<span class="q">?</span><span class="cap">${esc(nomeDe(v))}</span></div><div class="face f2">${av(alvo)}<span class="cap">${esc(nomeDe(v))} votou</span><strong style="font-size:14px">${esc(alvo.nome)}</strong></div></div></div>`; }).join('')}</div>
-      <div class="card tally" id="tally">${ordem.map(id => `<div class="it" data-t="${id}">${av(byId(id), 'sm')}<span class="nome" style="width:72px">${esc(byId(id).nome)}</span><span class="bar"><i class="fill"></i></span><span class="n num">0</span></div>`).join('')}</div>
-      <div class="veredito stack space" id="veredito" style="gap:10px;text-align:center">
-        <span class="eyebrow ${pegou ? 'accent' : 'danger'}">${pegou ? 'Pegaram o impostor' : 'Eliminada'}</span>
-        <h1>Dani era ${pegou ? 'o impostor' : 'inocente'}</h1>
-        <p class="lead">${pegou ? 'A palavra era ' + esc(SEGREDO.palavra) + '. Inocentes venceram.' : 'Ela sai do jogo. O impostor segue entre vocês.'}</p>
-        <button class="btn ${pegou ? '' : 'sec'}" data-go="${pegou ? 'fim' : 'impostor-segue'}" ${pegou ? 'data-set="fim:inocentes"' : ''}>${pegou ? 'Ver resultado' : 'Continuar'}</button>
-      </div>
+      ${topbar(`<span class="tag">Votação ${S.votacaoN}</span>`, 'Apuração', `<button class="link" data-go="apuracao">Repetir</button>`)}
+      <p class="lead" id="apTxt">Contando ${a.total} votos…</p>
+      <div class="stack" id="apLista">${vivos().map(v => `<div class="apRow" data-id="${v.id}" data-n="${a.cont[v.id]}">${av(v, 'sm')}<span class="nome grow" style="font-weight:600">${esc(nomeDe(v))}</span><span class="bar"><i class="fill"></i></span><span class="n num">?</span></div>`).join('')}</div>
+      <p class="fine" style="text-align:center">Só a quantidade de votos aparece. Ninguém vê quem votou em quem.</p>
+      <div class="veredito stack space" id="veredito" style="gap:10px;text-align:center">${veredito}</div>
     </div>`;
   };
 
   R['impostor-segue'] = () => {
-    const imp = S.papel === 'impostor';
+    const imp = S.papel === 'impostor', empate = S.ultimo && S.ultimo.tipo === 'empate';
+    const elim = empate ? null : byId(S.eliminados[S.eliminados.length - 1] || 'dani');
+    const sobrev = Math.max(1, S.votacaoN - 1), nivel = Math.min(3, 1 + sobrev);
     return `
     <div class="tela">
-      ${topbar('<span class="tag">Votação 1</span>', 'Resultado', '')}
+      ${topbar(`<span class="tag">Votação ${sobrev}</span>`, 'Resultado', '')}
       <div class="tile" style="align-items:center;text-align:center;gap:12px;padding-block:36px">
-        ${av(byId('dani'), 'lg fora')}
-        <span class="eyebrow" style="color:var(--danger)">Dani era inocente</span>
+        ${elim ? av(elim, 'lg fora') : ''}
+        <span class="eyebrow" style="color:var(--danger)">${empate ? 'Empate na votação' : esc(elim.nome) + ' era inocente'}</span>
         <h1 class="hero">Um impostor ainda está entre nós</h1>
-        <p class="lead">Mais uma rodada de palavras e nova votação. Sobraram 5 de vocês.</p>
+        <p class="lead">${empate ? 'Ninguém saiu.' : ''} Mais uma rodada de palavras e nova votação. Sobraram ${vivos().length} de vocês.</p>
       </div>
-      ${imp ? `<div class="card"><div class="row"><span class="lbl grow">Nova dica desbloqueada</span>${lvl(2)}</div><strong style="font-size:21px">${esc(SEGREDO.dicas[1])}</strong><p class="fine">Você sobreviveu a 1 de ${S.regras.teto} votações. Sobreviva a todas e vence.</p></div>`
-            : `<div class="card"><div class="row"><span class="lbl grow">Impostor</span><span class="tag danger">1 de ${S.regras.teto} votações sobrevividas</span></div><p class="cap">Ele acabou de ganhar uma dica melhor. Fica mais difícil a cada votação.</p></div>`}
-      <div class="card flat">
-        ${J.map(j => `<div class="linha">${av(j, 'sm ' + (j.id === 'dani' ? 'fora' : ''))}<span class="nome grow" style="${j.id === 'dani' ? 'color:var(--muted2);text-decoration:line-through' : ''}">${esc(nomeDe(j))}</span>${j.id === 'dani' ? '<span class="tag">eliminada</span>' : ''}</div>`).join('')}
-      </div>
-      <div class="stack space" style="gap:8px;text-align:center"><p class="cap">Rodada 2 começa em <strong class="num" id="segCont">6</strong> s</p><div class="prog"><i id="segBar"></i></div></div>
+      ${imp ? `<div class="card"><div class="row"><span class="lbl grow">Nova dica desbloqueada</span>${lvl(nivel)}</div><strong style="font-size:21px">${esc(SEGREDO.dicas[nivel - 1])}</strong><p class="fine">Você sobreviveu a ${sobrev} de ${S.regras.teto} votações. Sobreviva a todas e vence.</p></div>`
+            : `<div class="card"><div class="row"><span class="lbl grow">Impostor</span><span class="tag danger">${sobrev} de ${S.regras.teto} votações sobrevividas</span></div><p class="cap">Ele acabou de ganhar uma dica melhor. Fica mais difícil a cada votação.</p></div>`}
+      ${listaJogadores()}
+      <div class="stack space" style="gap:8px;text-align:center"><p class="cap">Rodada ${S.rodadaN} começa em <strong class="num" id="segCont">6</strong> s</p><div class="prog"><i id="segBar"></i></div></div>
     </div>`;
   };
 
   R.fim = () => {
-    const ino = S.fim === 'inocentes';
+    const ino = S.fim === 'inocentes', imp = byId(IMPOSTOR);
     const placar = [['Tucho', 12], ['Augusto', 11], ['Marcos', 9], ['Isaac', 8], ['Dvd', 6], ['Dani', 4]];
     return `
     <div class="tela">
       ${topbar('<span class="tag">Partida 4</span>', 'Fim', '')}
       <div class="tile" style="align-items:center;text-align:center;gap:12px;padding-block:40px">
-        <span class="eyebrow" style="color:${ino ? 'var(--accent)' : 'var(--danger)'}">${ino ? 'Pegaram o impostor' : 'Sobreviveu a 3 votações'}</span>
+        <span class="eyebrow" style="color:${ino ? 'var(--accent)' : 'var(--danger)'}">${ino ? 'Pegaram o impostor' : 'Sobreviveu a ' + S.regras.teto + ' votações'}</span>
         <h1 class="hero">${ino ? 'Inocentes venceram' : 'O impostor venceu'}</h1>
-        <div class="row" style="justify-content:center;gap:10px;margin-top:6px">${av(byId('tucho'), 'lg')}<span class="stack" style="gap:0;text-align:left"><span class="cap">O impostor era</span><strong style="font-size:21px">Tucho</strong></span></div>
+        <div class="row" style="justify-content:center;gap:10px;margin-top:6px">${av(imp, 'lg')}<span class="stack" style="gap:0;text-align:left"><span class="cap">O impostor era</span><strong style="font-size:21px">${esc(imp.nome)}</strong></span></div>
       </div>
       <div class="card" style="align-items:center;text-align:center;gap:4px">
         <span class="eyebrow">A palavra era</span>
@@ -576,7 +616,7 @@ table.rk .pos{color:var(--muted2);font-weight:600;width:28px;text-align:left}
       </div>
       <div class="card flat">
         <div class="linha" style="padding-top:14px"><span class="lbl grow">Placar da noite</span><span class="fine">inocente +1 · impostor +2</span></div>
-        ${placar.map(([n, p], i) => `<div class="linha"><span class="fine num" style="width:20px">${i + 1}</span><span class="nome grow">${esc(n)}</span>${(ino ? n !== 'Tucho' : n === 'Tucho') ? `<span class="tag accent">+${ino ? 1 : 2}</span>` : ''}<strong class="num" style="width:40px;text-align:right">${p}</strong></div>`).join('')}
+        ${placar.map(([n, p], i) => `<div class="linha"><span class="fine num" style="width:20px">${i + 1}</span><span class="nome grow">${esc(n)}</span>${(ino ? n !== imp.nome : n === imp.nome) ? `<span class="tag accent">+${ino ? 1 : 2}</span>` : ''}<strong class="num" style="width:40px;text-align:right">${p}</strong></div>`).join('')}
       </div>
       <div class="stack space" style="gap:8px;text-align:center"><p class="cap">Voltando ao lobby em <strong class="num" id="fimCont">8</strong> s</p><div class="prog"><i id="fimBar"></i></div><button class="btn ghost" data-go="lobby">Ir agora</button></div>
     </div>`;
@@ -608,45 +648,65 @@ table.rk .pos{color:var(--muted2);font-weight:600;width:28px;text-align:left}
   A.perfil = () => { app.querySelectorAll('[data-opt=tema] button').forEach(b => b.onclick = () => { S.tema = b.dataset.v; aplicarTema(); render(); }); const i = document.getElementById('nomeEx'); if (i) i.oninput = () => { S.nome = i.value.trim() || 'Marcos'; }; };
   A.login = () => { const i = document.getElementById('nomeVis'); if (i) { i.focus(); i.oninput = () => { S.nome = i.value.trim() || 'Visitante'; }; } };
   A.carta = () => { const c = document.getElementById('carta'); c.onclick = () => { S.cartaAberta = !S.cartaAberta; render(); }; c.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); c.click(); } }; };
-  A['vez-outro'] = () => { if (S.regras.vezSeg) contar(S.regras.vezSeg, () => { toast('Tempo esgotado: Dani foi pulada'); go('vez-minha'); }); T.set(() => { S.reacaoDe = 'dani'; S.reacao = null; go('reacao'); }, 5200); };
+  A['vez-outro'] = () => { const f = byId(falante()); if (S.regras.vezSeg) contar(S.regras.vezSeg, () => { toast('Tempo esgotado: ' + f.nome + ' pulad' + gen(f, 'o', 'a')); go('vez-minha'); }); T.set(() => { S.reacaoDe = f.id; S.reacao = null; go('reacao'); }, 5200); };
   A['vez-minha'] = () => { const f = document.getElementById('fPalavra'), i = document.getElementById('minha'); i.focus(); if (S.regras.vezSeg) contar(S.regras.vezSeg, () => { toast('Tempo esgotado: sua vez foi pulada'); S.reacaoDe = 'eu'; S.minhaPalavra = ''; go('reacao'); }); f.onsubmit = e => { e.preventDefault(); const t = i.value.trim(); if (!t) return toast('Digite a palavra que você falou'); S.minhaPalavra = t; S.reacaoDe = 'eu'; S.reacao = null; go('reacao'); }; };
   A.reacao = () => {
-    const r = (REACOES[S.reacaoDe] || [0, 0, 0]).slice(), base = r.slice();
+    const de = S.reacaoDe, r = de === 'eu' ? [0, 0, 0] : (REAC[de] || [0, 0, 0]).slice();
     app.querySelectorAll('[data-reacao]').forEach(b => b.onclick = () => { const i = +b.dataset.reacao; if (S.reacao === i) return; if (S.reacao !== null) r[S.reacao]--; S.reacao = i; r[i]++; app.querySelectorAll('.emoji').forEach(x => x.classList.toggle('on', +x.dataset.reacao === i)); [0, 1, 2].forEach(k => document.getElementById('n' + k).textContent = r[k]); });
-    if (S.reacaoDe === 'eu') { REACOES.eu = [0, 0, 0]; [0, 1, 2].forEach(k => document.getElementById('n' + k).textContent = 0); r[0] = r[1] = r[2] = 0; }
     [900, 1800, 2600, 3900, 5100].forEach((ms, k) => T.set(() => { const i = [0, 0, 1, 2, 0][k]; r[i]++; const el = document.getElementById('n' + i); if (el) el.textContent = r[i]; }, ms));
-    contar(S.regras.reacaoSeg, () => { if (S.reacaoDe === 'eu') { S.voto = null; go('votacao'); } else go('vez-minha'); });
+    contar(S.regras.reacaoSeg, () => { if (de === 'eu') { S.voto = null; go('votacao'); } else go('vez-minha'); });
   };
   A.votacao = () => app.querySelectorAll('[data-voto]').forEach(b => b.onclick = () => { S.voto = b.dataset.voto; render(); });
-  A['votacao-espera'] = () => { let n = 3; const ids = ['dvd', 'isaac', 'tucho']; ids.forEach((id, k) => T.set(() => { n++; const c = document.getElementById('votCont'); if (c) c.textContent = n + ' de 6 votaram'; const ch = document.querySelector(`[data-vc="${id}"]`); if (ch) { ch.classList.add('on'); ch.textContent = '✓ ' + byId(id).nome; } if (n === 6) T.set(() => go('apuracao'), 700); }, 900 * (k + 1))); };
+  A['votacao-espera'] = () => { const vs = vivos(); let n = ['eu', 'aug', 'tucho'].filter(vivo).length; const faltam = vs.filter(j => !['eu', 'aug', 'tucho'].includes(j.id)); faltam.forEach((j, k) => T.set(() => { n++; const c = document.getElementById('votCont'); if (c) c.textContent = n + ' de ' + vs.length + ' votaram'; const ch = document.querySelector(`[data-vc="${j.id}"]`); if (ch) { ch.classList.add('on'); ch.textContent = '✓ ' + nomeDe(j); } if (n === vs.length) T.set(() => go('apuracao'), 700); }, 900 * (k + 1))); };
   A.apuracao = () => {
-    const votos = VOTOS(), cards = [...app.querySelectorAll('.vcard')], cont = {};
-    const txt = document.getElementById('apTxt');
-    cards.forEach((c, k) => T.set(() => { c.classList.add('on'); const alvo = c.dataset.alvo; cont[alvo] = (cont[alvo] || 0) + 1; const it = document.querySelector(`[data-t="${alvo}"]`); if (it) { it.querySelector('.n').textContent = cont[alvo]; it.querySelector('.fill').style.width = (cont[alvo] / 6 * 100) + '%'; } }, 650 * (k + 1)));
+    // revela nome por nome, do menos votado pro mais votado; só a quantidade, nunca quem votou
+    const rows = [...app.querySelectorAll('.apRow')], txt = document.getElementById('apTxt');
+    const total = rows.reduce((s, r) => s + (+r.dataset.n), 0) || 1;
+    const ordem = rows.slice().sort((a, b) => (+a.dataset.n - +b.dataset.n) || (rows.indexOf(a) - rows.indexOf(b)));
+    const max = Math.max(...rows.map(r => +r.dataset.n)), tops = rows.filter(r => +r.dataset.n === max);
+    const a = apurar(), j = a.id ? byId(a.id) : null, pegou = a.tipo === 'impostor';
+    let t = 700;
+    ordem.forEach((r, i) => {
+      const n = +r.dataset.n, ultimo = i === ordem.length - 1;
+      if (ultimo && ordem.length > 1) { T.set(() => { if (txt) txt.textContent = 'Falta um…'; r.classList.add('tensao'); }, t); t += 1500; }
+      T.set(() => {
+        r.classList.remove('tensao'); r.classList.add('on'); if (!n) r.classList.add('zero');
+        const el = r.querySelector('.n'); el.textContent = '0'; r.querySelector('.fill').style.width = (n / total * 100) + '%';
+        for (let k = 1; k <= n; k++) T.set(() => { el.textContent = k; }, 230 * k);
+      }, t);
+      t += 650 + 230 * n;
+    });
     T.set(() => {
-      const max = Math.max(...Object.values(cont)), top = Object.keys(cont).filter(k => cont[k] === max);
-      if (txt) txt.textContent = top.length > 1 ? 'Empate: ninguém sai desta vez.' : byId(top[0]).nome + ' foi a mais votada.';
-      top.forEach(id => { const it = document.querySelector(`[data-t="${id}"]`); if (it) it.classList.add('lead', S.apur === 'impostor' ? 'bom' : ''); cards.filter(c => c.dataset.alvo === id).forEach(c => c.classList.add('alvo', S.apur === 'impostor' ? '' : 'ruim')); });
-    }, 650 * cards.length + 500);
-    T.set(() => { const v = document.getElementById('veredito'); if (v) v.classList.add('on'); if (S.apur === 'impostor') confete(); }, 650 * cards.length + 1700);
+      tops.forEach(r => r.classList.add('lead', pegou ? 'bom' : 'x'));
+      if (txt) txt.textContent = a.tipo === 'empate' ? 'Empate: ninguém sai desta vez.' : `${j.nome} foi ${gen(j, 'o mais votado', 'a mais votada')}.`;
+      const v = document.getElementById('veredito'); if (v) v.classList.add('on');
+      if (pegou) confete();
+    }, t + 300);
   };
   A['impostor-segue'] = () => { let n = 6; const bar = document.getElementById('segBar'); bar.style.width = '100%'; T.set(() => { bar.style.transition = 'width 6s linear'; bar.style.width = '0%'; }, 50); T.int(() => { n--; const c = document.getElementById('segCont'); if (c) c.textContent = n; if (n <= 0) { T.limpar(); go('vez-outro'); } }, 1000); };
   A.fim = () => { if (S.fim === 'inocentes') confete(); let n = 8; const bar = document.getElementById('fimBar'); bar.style.width = '100%'; T.set(() => { bar.style.transition = 'width 8s linear'; bar.style.width = '0%'; }, 50); T.int(() => { n--; const c = document.getElementById('fimCont'); if (c) c.textContent = n; if (n <= 0) { T.limpar(); go('lobby'); } }, 1000); };
 
   // ---------- navegação ----------
+  function aplicarResultado() {
+    // depois da apuração: inocente eliminado sai das telas seguintes; empate só avança a rodada
+    if (!S.ultimo) return;
+    if (S.ultimo.tipo === 'eliminado' && S.ultimo.id && vivo(S.ultimo.id)) S.eliminados.push(S.ultimo.id);
+    S.votacaoN++; S.rodadaN++; S.voto = null; S.minhaPalavra = ''; S.reacao = null;
+  }
+  function novaPartida() { S.eliminados = []; S.votacaoN = 1; S.rodadaN = 1; S.ultimo = null; S.voto = null; S.minhaPalavra = ''; S.reacao = null; }
   function render() {
     T.limpar();
     document.querySelectorAll('.confete').forEach(c => c.remove());
     app.innerHTML = (R[S.tela] || R.login)();
-    app.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', e => { e.preventDefault(); aplicarSet(b); if (b.dataset.toast) toast(b.dataset.toast); go(b.dataset.go); }));
+    app.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', e => { e.preventDefault(); aplicarSet(b); if (b.dataset.aplicar) aplicarResultado(); if (b.dataset.toast) toast(b.dataset.toast); go(b.dataset.go); }));
     app.querySelectorAll('[data-rerender]').forEach(b => b.addEventListener('click', () => { aplicarSet(b); render(); }));
     app.querySelectorAll('[data-toast]:not([data-go])').forEach(b => b.addEventListener('click', () => toast(b.dataset.toast)));
-    app.querySelectorAll('[data-carta]').forEach(b => b.addEventListener('click', () => toast(S.papel === 'impostor' ? 'Você é o impostor · dica: ' + SEGREDO.dicas[0] : 'Sua palavra: ' + SEGREDO.palavra)));
+    app.querySelectorAll('[data-carta]').forEach(b => b.addEventListener('click', () => toast(S.papel === 'impostor' ? 'Você é o impostor · dica: ' + SEGREDO.dicas[Math.min(2, Math.max(0, S.votacaoN - 1))] : 'Sua palavra: ' + SEGREDO.palavra)));
     if (A[S.tela]) A[S.tela]();
     atualizarPicker();
   }
   function aplicarSet(b) { if (!b.dataset.set) return; b.dataset.set.split(',').forEach(kv => { const [k, v] = kv.split(':'); S[k] = v === '1' ? true : v === '0' ? false : v; }); }
-  function go(tela) { S.tela = tela; if (tela === 'carta') S.cartaAberta = false; if (tela === 'lobby') S.menuAberto = null; if (tela === 'votacao') S.voto = null; window.scrollTo(0, 0); render(); }
+  function go(tela) { S.tela = tela; if (tela === 'carta') { S.cartaAberta = false; novaPartida(); } if (tela === 'lobby') { S.menuAberto = null; novaPartida(); } if (tela === 'votacao') S.voto = null; window.scrollTo(0, 0); render(); }
 
   // ---------- barra do protótipo ----------
   const sheet = document.getElementById('sheet');
