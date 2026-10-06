@@ -106,7 +106,7 @@
     const q = C.norm(texto); if (q.length < 2) return [];
     const toks = q.split(' ').filter(Boolean);
     return F.CLUBES.filter(c => { const w = c.k.split(' '); return toks.every(t => w.some(x => x.startsWith(t))); })
-      .sort((a, b) => (b.k === q) - (a.k === q) || b.n - a.n).slice(0, n);
+      .sort((a, b) => (b.k === q) - (a.k === q) || b.n - a.n).filter((c, i, l) => l.findIndex(x => x.k === c.k) === i).slice(0, n);
   };
   // jogou no clube? (compara pelo id e, de reserva, pelo nome curto: o Wikidata às vezes tem dois itens para o mesmo clube)
   F.jogouNoClube = (j, clubeId) => { const c = F.clubePorId[clubeId]; return j.clubes.has(clubeId) || (c && j.car.some(x => C.norm(x.nome) === c.k)); };
