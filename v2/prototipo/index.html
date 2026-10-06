@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Impostor v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+/* Protótipo navegável do Impostor v2.
+   Layout: uma coluna de celular (max 430px), uma tela por vez, barra de protótipo fixa embaixo.
+   Tokens do DESIGN-apple.md: um acento (Action Blue), zero gradiente, zero sombra. Escuro por padrão. */
+:root{
+  --bg:#000000; --card:#1d1d1f; --card2:#2a2a2c;
+  --ink:#ffffff; --muted:#cccccc; --muted2:#8a8a8e; --hair:rgba(255,255,255,.14);
+  --accent:#2997ff; --on-accent:#ffffff; --danger:#ff453a;
+  --font:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",Inter,"Helvetica Neue",sans-serif;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){ --bg:#f5f5f7; --card:#ffffff; --card2:#f5f5f7; --ink:#1d1d1f; --muted:#333333; --muted2:#7a7a7a; --hair:#e0e0e0; --accent:#0066cc; --danger:#ff3b30; color-scheme:light }
+}
+:root[data-theme="light"]{ --bg:#f5f5f7; --card:#ffffff; --card2:#f5f5f7; --ink:#1d1d1f; --muted:#333333; --muted2:#7a7a7a; --hair:#e0e0e0; --accent:#0066cc; --danger:#ff3b30; color-scheme:light }
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:17px;line-height:1.47;letter-spacing:-0.374px;-webkit-font-smoothing:antialiased}
+#app{max-width:430px;margin:0 auto;min-height:100%;padding-inline:16px;padding-block:0 calc(112px + env(safe-area-inset-bottom,0px))}
+.tela{display:flex;flex-direction:column;gap:16px;min-height:calc(100dvh - 112px - env(safe-area-inset-bottom,0px));padding-top:env(safe-area-inset-top,0px)}
+.tela.centro{justify-content:center;text-align:center;align-items:center}
+.tela.centro > *{width:100%}
+.topbar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;min-height:52px;font-size:15px;letter-spacing:-0.224px}
+.topbar .l{justify-self:start}.topbar .r{justify-self:end}.topbar .t{font-weight:600;font-size:17px}
+a,.link{color:var(--accent);text-decoration:none;background:none;border:0;padding:0;font:inherit;cursor:pointer}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)}
+h1,h2,h3{margin:0;line-height:1.15;text-wrap:balance}
+h1{font-size:34px;font-weight:600;letter-spacing:-0.7px}
+h1.hero{font-size:44px;letter-spacing:-1px;line-height:1.05}
+h2{font-size:21px;font-weight:600;letter-spacing:-0.3px}
+h3{font-size:17px;font-weight:600}
+p{margin:0}
+.lead{color:var(--muted)}
+.cap{font-size:14px;line-height:1.43;letter-spacing:-0.224px;color:var(--muted)}
+.fine{font-size:12px;line-height:1.3;letter-spacing:-0.12px;color:var(--muted2)}
+.num{font-variant-numeric:tabular-nums}
+.danger{color:var(--danger)}
+.accent{color:var(--accent)}
+.stack{display:flex;flex-direction:column;gap:8px}
+.row{display:flex;align-items:center;gap:12px}
+.grow{flex:1;min-width:0}
+.space{margin-top:auto}
+
+.card{background:var(--card);border:1px solid var(--hair);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:12px}
+.card.flat{padding:4px 20px}
+.tile{background:#272729;color:#fff;border-radius:18px;padding:28px 20px;display:flex;flex-direction:column;gap:10px;
+  --ink:#fff;--muted:#cccccc;--muted2:#9a9a9f;--hair:rgba(255,255,255,.16);--card:#2a2a2c;--card2:#3a3a3c;--accent:#2997ff;--danger:#ff453a}
+
+.btn{display:flex;justify-content:center;align-items:center;gap:10px;width:100%;min-height:52px;padding:13px 24px;border-radius:9999px;border:0;background:var(--accent);color:var(--on-accent);font:600 17px/1.2 var(--font);letter-spacing:-0.374px;cursor:pointer;transition:transform .08s ease,opacity .2s}
+.btn:active{transform:scale(.985)}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.sec{background:var(--card2);color:var(--ink);border:1px solid var(--hair)}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.danger{background:var(--danger);color:#fff}
+.btn.white{background:#fff;color:#1d1d1f}
+.btn.sm{min-height:36px;padding:8px 15px;border-radius:8px;font-size:14px;font-weight:400;letter-spacing:-0.224px;width:auto;background:var(--card2);color:var(--ink);border:1px solid var(--hair)}
+.btn.sm.accent{color:var(--accent)}
+.btn:focus-visible,.chip:focus-visible,.seg button:focus-visible,.field:focus-visible{outline:2px solid #0071e3;outline-offset:2px}
+
+.field{width:100%;min-height:52px;padding:13px 16px;border-radius:12px;background:var(--card2);border:1px solid var(--hair);color:var(--ink);font:400 17px/1.3 var(--font);letter-spacing:-0.374px;outline:none}
+.field:focus{border-color:var(--accent)}
+.field.code{text-transform:uppercase;letter-spacing:6px;font-weight:600;text-align:center;font-size:22px}
+.lbl{font-size:14px;font-weight:600;letter-spacing:-0.224px;color:var(--muted)}
+
+.seg{display:flex;background:var(--card2);border:1px solid var(--hair);border-radius:9999px;padding:3px;gap:2px}
+.seg button{flex:1;border:0;background:transparent;color:var(--muted);padding:9px 8px;border-radius:9999px;font:600 14px/1.2 var(--font);letter-spacing:-0.224px;cursor:pointer;white-space:nowrap}
+.seg button.on{background:var(--ink);color:var(--bg)}
+.seg button:disabled{opacity:.35;cursor:default}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:9px 14px;border-radius:9999px;border:1px solid var(--hair);background:var(--card2);color:var(--muted);font:600 14px/1.2 var(--font);letter-spacing:-0.224px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.chip.on{border-color:var(--accent);color:var(--ink);background:color-mix(in srgb,var(--accent) 16%,var(--card2))}
+.chip.ok{border-color:var(--accent)}
+
+.linha{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--hair);min-width:0}
+.linha:last-child{border-bottom:0}
+.linha .nome{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.av{width:40px;height:40px;border-radius:50%;background:var(--card2);color:var(--ink);display:grid;place-items:center;font-weight:600;font-size:15px;flex-shrink:0;border:1px solid var(--hair);letter-spacing:0}
+.av.sm{width:28px;height:28px;font-size:12px}
+.av.lg{width:64px;height:64px;font-size:24px}
+.av.xl{width:96px;height:96px;font-size:36px}
+.av.eu{outline:2px solid var(--accent);outline-offset:2px}
+.av.fora{opacity:.35;text-decoration:line-through}
+.avs{display:flex}
+.avs .av{margin-left:-8px;border:2px solid var(--bg)}
+.avs .av:first-child{margin-left:0}
+
+.tag{font-size:12px;font-weight:600;letter-spacing:-0.12px;padding:3px 9px;border-radius:9999px;background:var(--card2);color:var(--muted);border:1px solid var(--hair);white-space:nowrap}
+.tag.accent{color:var(--accent);border-color:var(--accent)}
+.tag.danger{color:var(--danger);border-color:var(--danger)}
+.tag.ink{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+.ring{position:relative;display:grid;place-items:center;margin:0 auto}
+.ring svg{position:absolute;inset:0;transform:rotate(-90deg);width:100%;height:100%}
+.ring .trk{fill:none;stroke:var(--hair);stroke-width:4}
+.ring .prg{fill:none;stroke:var(--accent);stroke-width:4;stroke-linecap:round;transition:stroke-dashoffset .12s linear}
+.ring.pouco .prg{stroke:var(--danger)}
+.ring span{font-weight:600;font-size:22px;letter-spacing:-0.4px}
+
+.emojis{display:flex;justify-content:center;gap:14px}
+.emoji{display:flex;flex-direction:column;align-items:center;gap:6px;background:transparent;border:0;padding:0;cursor:pointer;color:var(--ink);font:inherit}
+.emoji .face{width:78px;height:78px;border-radius:50%;background:var(--card2);border:1px solid var(--hair);display:grid;place-items:center;font-size:34px;transition:transform .12s ease,border-color .2s}
+.emoji.on .face{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 18%,var(--card2));transform:scale(1.06)}
+.emoji .n{font-weight:600;font-size:15px;font-variant-numeric:tabular-nums;color:var(--muted)}
+.emoji.on .n{color:var(--ink)}
+.palavra{font-size:40px;font-weight:600;letter-spacing:-1px;line-height:1.05;word-break:break-word}
+
+.voto{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--hair);background:var(--card2);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.voto.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--card2))}
+.voto .rad{width:22px;height:22px;border-radius:50%;border:2px solid var(--muted2);margin-left:auto;flex-shrink:0;display:grid;place-items:center}
+.voto.on .rad{border-color:var(--accent)}
+.voto.on .rad::after{content:"";width:12px;height:12px;border-radius:50%;background:var(--accent)}
+
+.vgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.vcard{perspective:800px;height:118px}
+.vcard .inner{position:relative;width:100%;height:100%;transition:transform .65s cubic-bezier(.2,.7,.2,1);transform-style:preserve-3d}
+.vcard.on .inner{transform:rotateY(180deg)}
+.vcard .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:14px;border:1px solid var(--hair);background:var(--card2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px}
+.vcard .f2{transform:rotateY(180deg);background:var(--card)}
+.vcard .q{font-size:30px;font-weight:600;color:var(--muted2)}
+.vcard .cap{text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.vcard.alvo .f2{border-color:var(--accent)}
+.vcard.alvo.ruim .f2{border-color:var(--danger)}
+.tally{display:flex;flex-direction:column;gap:10px}
+.tally .it{display:flex;align-items:center;gap:10px}
+.tally .bar{flex:1;height:8px;border-radius:9999px;background:var(--card2);overflow:hidden}
+.tally .fill{height:100%;width:0;background:var(--accent);transition:width .45s ease}
+.tally .it.lead .fill{background:var(--danger)}
+.tally .it.lead.bom .fill{background:var(--accent)}
+.tally .n{width:20px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.veredito{opacity:0;transform:translateY(12px);transition:opacity .5s ease,transform .5s ease}
+.veredito.on{opacity:1;transform:none}
+
+.prog{height:3px;border-radius:9999px;background:var(--card2);overflow:hidden;width:100%}
+.prog i{display:block;height:100%;background:var(--accent);width:100%;transition:width 1s linear}
+
+.lvl{display:flex;gap:6px;align-items:center}
+.lvl i{width:22px;height:5px;border-radius:9999px;background:var(--hair)}
+.lvl i.on{background:var(--accent)}
+
+table.rk{width:100%;border-collapse:collapse}
+table.rk th{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);text-align:left;font-weight:600;padding:6px 0 6px 10px;white-space:nowrap}
+table.rk th:first-child{padding-left:0}
+table.rk td{padding:11px 0 11px 10px;border-top:1px solid var(--hair);font-variant-numeric:tabular-nums;white-space:nowrap}
+table.rk td:first-child{padding-left:0;white-space:normal}
+table.rk td:not(:first-child),table.rk th:not(:first-child){text-align:right}
+table.rk .pos{color:var(--muted2);font-weight:600;width:28px;text-align:left}
+
+.qr{width:148px;height:148px;background:#fff;border-radius:12px;padding:8px;margin:0 auto}
+.qr canvas{width:100%;height:100%;image-rendering:pixelated;display:block}
+.codigo{font-size:44px;font-weight:600;letter-spacing:10px;line-height:1;padding-left:10px}
+
+.menu{display:flex;flex-direction:column;gap:6px;padding:8px 0 4px}
+.menu button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:11px 12px;border-radius:10px;border:1px solid var(--hair);background:var(--card2);color:var(--ink);font:inherit;cursor:pointer}
+.menu button.danger{color:var(--danger)}
+
+.carta{min-height:280px;cursor:pointer;justify-content:center;align-items:center;text-align:center;perspective:900px}
+.carta .capa{display:flex;flex-direction:column;align-items:center;gap:8px}
+.carta .olho{width:56px;height:56px;border-radius:50%;border:1px solid var(--hair);display:grid;place-items:center}
+
+.picker{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;align-items:center;gap:2px;background:var(--ink);color:var(--bg);border-radius:9999px;padding:5px 6px;z-index:50;font:600 13px/1 var(--font);letter-spacing:-0.1px;max-width:calc(100% - 32px)}
+.picker button{background:transparent;border:0;color:inherit;font:inherit;cursor:pointer;padding:9px 10px;border-radius:9999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.picker button.mid{max-width:200px}
+.picker .seta{font-size:16px;line-height:1;padding:7px 10px}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:60;display:none}
+.sheet.on{display:block}
+.sheet .panel{position:absolute;left:0;right:0;bottom:0;max-width:430px;margin:0 auto;background:var(--card);border:1px solid var(--hair);border-radius:18px 18px 0 0;padding:14px 16px calc(24px + env(safe-area-inset-bottom,0px));max-height:82vh;overflow:auto;display:flex;flex-direction:column;gap:14px}
+.sheet .grab{width:36px;height:5px;border-radius:9999px;background:var(--hair);margin:0 auto}
+.sheet .lista{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.sheet .lista button{text-align:left;padding:10px 12px;border-radius:10px;border:1px solid var(--hair);background:var(--card2);color:var(--ink);font:400 14px/1.3 var(--font);cursor:pointer}
+.sheet .lista button.on{border-color:var(--accent);color:var(--accent);font-weight:600}
+.sheet .opt{display:grid;grid-template-columns:96px 1fr;align-items:center;gap:10px}
+
+.confete{position:fixed;inset:0;pointer-events:none;z-index:5}
+.toast{position:fixed;left:50%;bottom:calc(78px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:9999px;font-size:14px;font-weight:600;z-index:70;white-space:nowrap}
+.gbtn svg{width:20px;height:20px}
+@media (prefers-reduced-motion: reduce){ *{transition:none !important;animation:none !important} }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div class="picker" id="picker">
+  <button class="seta" id="pAnt" aria-label="Tela anterior">‹</button>
+  <button class="mid" id="pMid">Telas</button>
+  <button class="seta" id="pProx" aria-label="Próxima tela">›</button>
+</div>
+<div class="sheet" id="sheet">
+  <div class="panel">
+    <div class="grab"></div>
+    <div class="row"><span class="eyebrow grow">Protótipo · navegar entre as telas</span><button class="link" id="pFechar">Fechar</button></div>
+    <div class="lista" id="pLista"></div>
+    <div class="eyebrow" style="margin-top:4px">Ver como</div>
+    <div class="opt"><span class="cap">Tema</span><div class="seg" id="optTema"><button data-v="dark">Escuro</button><button data-v="light">Claro</button></div></div>
+    <div class="opt"><span class="cap">Meu papel</span><div class="seg" id="optPapel"><button data-v="inocente">Inocente</button><button data-v="impostor">Impostor</button></div></div>
+    <div class="opt"><span class="cap">Anfitrião</span><div class="seg" id="optHost"><button data-v="1">Eu</button><button data-v="0">Outro</button></div></div>
+    <div class="opt"><span class="cap">Apuração</span><div class="seg" id="optApur"><button data-v="inocente">Saiu inocente</button><button data-v="impostor">Pegou impostor</button></div></div>
+    <div class="opt"><span class="cap">Fim</span><div class="seg" id="optFim"><button data-v="inocentes">Inocentes</button><button data-v="impostor">Impostor</button></div></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ---------- estado do protótipo ----------
+  const ls = { get(k, d) { try { const v = localStorage.getItem('imp2:' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem('imp2:' + k, JSON.stringify(v)); } catch (e) {} } };
+  const S = {
+    tema: ls.get('tema', 'dark'), papel: 'inocente', host: true, apur: 'inocente', fim: 'inocentes',
+    visitante: false, nome: 'Marcos', tela: 'login', voto: null, reacao: null, reacaoDe: 'dani', minhaPalavra: '', cartaAberta: false, menuAberto: null, semLogin: false,
+    regras: { tema: 'Futebol', cats: ['Jogadores Brasileiros', 'Jogadores Estrangeiros', 'Clubes'], impostores: 1, rodadas: 2, reacaoSeg: 10, vezSeg: 60, teto: 3 }
+  };
+  const CATS = { Futebol: ['Jogadores Brasileiros', 'Jogadores Estrangeiros', 'Clubes', 'Estádios e Competições', 'Técnicos'], Geral: ['Objetos', 'Comidas e Bebidas', 'Lugares', 'Famosos', 'Filmes e Séries', 'Animais', 'Profissões', 'Marcas', 'Esportes e Atividades'] };
+  const J = [
+    { id: 'eu', nome: 'Marcos' }, { id: 'aug', nome: 'Augusto' }, { id: 'tucho', nome: 'Tucho' },
+    { id: 'dvd', nome: 'Dvd' }, { id: 'dani', nome: 'Dani' }, { id: 'isaac', nome: 'Isaac' }
+  ];
+  const byId = id => J.find(j => j.id === id);
+  const hostId = () => S.host ? 'eu' : 'aug';
+  const ORDEM = ['tucho', 'aug', 'dani', 'isaac', 'eu', 'dvd'];
+  const PALAVRAS = { tucho: ['Luvas'], aug: ['Itália'], dani: ['Capitão'], isaac: ['Pênalti'], eu: [], dvd: [] };
+  const REACOES = { tucho: [3, 1, 1], aug: [4, 0, 1], dani: [2, 2, 1], isaac: [1, 3, 1] };
+  const SEGREDO = { palavra: 'Buffon', cat: 'Jogadores Estrangeiros', dicas: ['Goleiro', 'Goleiro italiano, campeão do mundo em 2006', 'Lenda da Juventus, apelido Gigi, jogou até os 45 anos'] };
+  const VOTOS = () => ({ tucho: 'dani', aug: 'dani', dani: 'isaac', isaac: 'dani', eu: S.voto || 'dani', dvd: 'tucho' });
+
+  const app = document.getElementById('app');
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const T = { ids: [], set(f, ms) { const i = setTimeout(f, ms); this.ids.push(i); return i; }, int(f, ms) { const i = setInterval(f, ms); this.ids.push(i); return i; }, limpar() { this.ids.forEach(i => { clearTimeout(i); clearInterval(i); }); this.ids = []; } };
+  const toast = msg => { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2200); };
+  const aplicarTema = () => { document.documentElement.setAttribute('data-theme', S.tema); ls.set('tema', S.tema); const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = S.tema === 'dark' ? '#000000' : '#f5f5f7'; };
+  const ini = n => n.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  const av = (j, cls) => `<span class="av ${cls || ''} ${j.id === 'eu' ? 'eu' : ''}" aria-hidden="true">${esc(ini(j.nome))}</span>`;
+  const nomeDe = j => j.id === 'eu' ? 'Você' : j.nome;
+
+  // ---------- componentes ----------
+  const topbar = (esq, titulo, dir) => `<div class="topbar"><span class="l">${esq || ''}</span><span class="t">${titulo || ''}</span><span class="r">${dir || ''}</span></div>`;
+  const voltar = (tela, txt) => `<button class="link" data-go="${tela}">‹ ${txt || 'Voltar'}</button>`;
+  const ring = (seg, size) => { size = size || 76; const r = size / 2 - 4, c = (2 * Math.PI * r).toFixed(1); return `<div class="ring" id="ring" style="width:${size}px;height:${size}px"><svg viewBox="0 0 ${size} ${size}"><circle class="trk" cx="${size / 2}" cy="${size / 2}" r="${r}"/><circle class="prg" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="0"/></svg><span class="num" id="ringTxt">${seg}</span></div>`; };
+  function contar(seg, onFim) {
+    const ini = Date.now(), ring = document.getElementById('ring'), prg = ring && ring.querySelector('.prg'), txt = document.getElementById('ringTxt');
+    const c = prg ? +prg.getAttribute('stroke-dasharray') : 0;
+    T.int(() => {
+      const rest = Math.max(0, seg - (Date.now() - ini) / 1000);
+      if (prg) prg.style.strokeDashoffset = (c * (1 - rest / seg)).toFixed(1);
+      if (txt) txt.textContent = Math.ceil(rest);
+      if (ring) ring.classList.toggle('pouco', rest <= 3);
+      if (rest <= 0) { T.limpar(); onFim && onFim(); }
+    }, 100);
+  }
+  const lvl = n => `<span class="lvl" aria-label="Dica nível ${n} de 3">${[1, 2, 3].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</span>`;
+  const gLogo = '<svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.7 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 2.9-2.2 5.4-4.7 7.1l7.6 5.9c4.4-4.1 6.9-10.1 6.9-17z"/><path fill="#FBBC05" d="M10.5 28.6c-.5-1.5-.8-3-.8-4.6s.3-3.1.8-4.6l-7.9-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.6-5.9c-2.1 1.4-4.7 2.2-7.6 2.2-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>';
+  const resumoRegras = () => { const r = S.regras; return `${r.tema} · ${r.rodadas} rodada${r.rodadas > 1 ? 's' : ''} de palavras · reação ${r.reacaoSeg} s · vez ${r.vezSeg ? r.vezSeg + ' s' : 'sem tempo'} · impostor vence com ${r.teto} votações`; };
+  function qrFake(code) {
+    const c = document.getElementById('qr'); if (!c) return;
+    const n = 25, ctx = c.getContext('2d'); c.width = n; c.height = n; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, n, n); ctx.fillStyle = '#1d1d1f';
+    let h = 2166136261; for (const ch of code) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+    const rnd = () => { h ^= h << 13; h >>>= 0; h ^= h >> 17; h ^= h << 5; h >>>= 0; return h / 4294967295; };
+    const finder = (x, y) => { for (let i = 0; i < 7; i++) for (let j = 0; j < 7; j++) { const b = i === 0 || i === 6 || j === 0 || j === 6 || (i >= 2 && i <= 4 && j >= 2 && j <= 4); if (b) ctx.fillRect(x + j, y + i, 1, 1); } };
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { const emFinder = (x < 8 && y < 8) || (x > n - 9 && y < 8) || (x < 8 && y > n - 9); if (!emFinder && rnd() < 0.45) ctx.fillRect(x, y, 1, 1); }
+    finder(0, 0); finder(n - 7, 0); finder(0, n - 7);
+  }
+  function confete() {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const c = document.createElement('canvas'); c.className = 'confete'; document.body.appendChild(c);
+    const ctx = c.getContext('2d'); const W = c.width = innerWidth, H = c.height = innerHeight;
+    const cs = getComputedStyle(document.documentElement); const cores = [cs.getPropertyValue('--accent').trim(), cs.getPropertyValue('--ink').trim(), cs.getPropertyValue('--muted2').trim()];
+    const ps = Array.from({ length: 110 }, () => ({ x: Math.random() * W, y: -20 - Math.random() * H * .5, v: 2 + Math.random() * 3, r: Math.random() * Math.PI, s: 4 + Math.random() * 5, c: cores[Math.floor(Math.random() * 3)], w: Math.random() * 2 - 1 }));
+    const t0 = Date.now();
+    const tick = () => { ctx.clearRect(0, 0, W, H); ps.forEach(p => { p.y += p.v; p.x += Math.sin((p.y + p.r * 50) / 30) * .8; p.r += .05 * p.w; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); ctx.restore(); }); if (Date.now() - t0 < 3200) requestAnimationFrame(tick); else c.remove(); };
+    tick();
+  }
+
+  // ---------- telas ----------
+  const TELAS = [
+    ['login', 'Login'], ['inicio', 'Início'], ['perfil', 'Perfil'], ['lobby', 'Lobby'], ['regras', 'Regras da partida'],
+    ['carta', 'Sua carta'], ['vez-outro', 'Vez de outro'], ['vez-minha', 'Sua vez'], ['reacao', 'Reação à palavra'],
+    ['votacao', 'Votação'], ['votacao-espera', 'Aguardando votos'], ['apuracao', 'Apuração'], ['impostor-segue', 'Impostor segue'],
+    ['fim', 'Fim de partida'], ['ranking', 'Ranking']
+  ];
+  const R = {};
+
+  R.login = () => `
+    <div class="tela centro">
+      <div class="stack" style="gap:6px">
+        <span class="eyebrow">Res Assiny</span>
+        <h1 class="hero">Impostor</h1>
+        <p class="lead">Todos sabem a palavra, menos um.<br>Descubra quem está blefando.</p>
+      </div>
+      <div class="stack" style="gap:10px;margin-top:24px">
+        <button class="btn white gbtn" data-go="inicio" data-set="visitante:0">${gLogo}Continuar com Google</button>
+        ${S.semLogin ? `
+          <div class="card" style="text-align:left">
+            <span class="lbl">Como te chamam</span>
+            <input class="field" id="nomeVis" maxlength="20" autocomplete="off" placeholder="Seu apelido" value="">
+            <button class="btn sec" data-go="inicio" data-set="visitante:1">Entrar como visitante</button>
+            <p class="fine">Visitante joga normalmente, mas a partida não conta no ranking.</p>
+          </div>` : `<button class="btn ghost" data-set="semLogin:1" data-rerender="1">Jogar sem login</button>`}
+      </div>
+      <p class="fine" style="margin-top:24px">Com a conta Google seu nome, foto e histórico ficam salvos.</p>
+    </div>`;
+
+  R.inicio = () => `
+    <div class="tela">
+      ${topbar('', '', `<button class="link" data-go="perfil" aria-label="Perfil">${av({ id: 'eu', nome: S.nome }, 'sm')}</button>`)}
+      <div class="stack" style="gap:4px">
+        <span class="eyebrow">Impostor</span>
+        <h1>Olá, ${esc(S.nome)}</h1>
+        ${S.visitante ? `<p class="cap">Você entrou como visitante. <button class="link" data-go="login">Entrar com Google</button> para contar no ranking.</p>` : `<p class="cap">Pronto para a próxima rodada.</p>`}
+      </div>
+      <button class="btn" data-go="lobby" data-set="host:1">Criar sala</button>
+      <div class="card">
+        <span class="lbl">Entrar numa sala</span>
+        <div class="row"><input class="field code grow" id="codigo" maxlength="4" placeholder="CÓDIGO" autocomplete="off"><button class="btn" style="width:auto;padding-inline:20px" data-go="lobby" data-set="host:0">Entrar</button></div>
+        <p class="fine">Peça o código de 4 letras pro anfitrião ou aponte a câmera pro QR dele.</p>
+      </div>
+      <div class="card flat">
+        <button class="linha link" data-go="ranking" style="width:100%;color:var(--ink)"><span class="grow" style="text-align:left;font-weight:600">Ranking</span><span class="cap">% de vitórias e pontos</span><span class="accent">›</span></button>
+        <button class="linha link" data-go="perfil" style="width:100%;color:var(--ink)"><span class="grow" style="text-align:left;font-weight:600">Perfil</span><span class="cap">nome, foto e tema</span><span class="accent">›</span></button>
+      </div>
+      <p class="fine space">Impostor v2 · protótipo</p>
+    </div>`;
+
+  R.perfil = () => `
+    <div class="tela">
+      ${topbar(voltar('inicio'), 'Perfil', `<button class="link" data-go="inicio" data-toast="Perfil salvo">Salvar</button>`)}
+      <div class="tela centro" style="min-height:0;gap:10px;padding-top:8px">
+        ${av({ id: 'eu', nome: S.nome }, 'xl')}
+        <div class="row" style="justify-content:center;gap:8px"><span class="tag">Foto do Google</span><button class="btn sm" disabled>Trocar foto · em breve</button></div>
+      </div>
+      <div class="card">
+        <span class="lbl">Nome de exibição</span>
+        <input class="field" id="nomeEx" maxlength="20" autocomplete="off" value="${esc(S.nome)}">
+        <p class="fine">É assim que os outros te veem na sala e no ranking.</p>
+      </div>
+      <div class="card">
+        <span class="lbl">Aparência</span>
+        <div class="seg" data-opt="tema"><button data-v="dark" class="${S.tema === 'dark' ? 'on' : ''}">Escuro</button><button data-v="light" class="${S.tema === 'light' ? 'on' : ''}">Claro</button></div>
+        <p class="fine">Cada jogador escolhe o seu. O padrão é escuro.</p>
+      </div>
+      <div class="card">
+        <span class="lbl">Suas estatísticas</span>
+        <div class="row" style="justify-content:space-between"><span class="cap">Partidas</span><strong class="num">23</strong></div>
+        <div class="row" style="justify-content:space-between"><span class="cap">Vitórias</span><strong class="num">14 · 61%</strong></div>
+        <div class="row" style="justify-content:space-between"><span class="cap">Como impostor</span><strong class="num">3 de 4</strong></div>
+        <div class="row" style="justify-content:space-between"><span class="cap">Pontos</span><strong class="num">19</strong></div>
+      </div>
+      <button class="btn ghost" data-go="login">Sair da conta</button>
+    </div>`;
+
+  R.lobby = () => {
+    const host = hostId();
+    const menu = id => S.menuAberto === id ? `<div class="menu"><button data-act="promover" data-id="${id}">Promover a anfitrião</button><button class="danger" data-act="remover" data-id="${id}">Remover da sala</button></div>` : '';
+    return `
+    <div class="tela">
+      ${topbar(`<button class="link" data-go="inicio">Sair</button>`, 'Sala KXPM', `<button class="link" data-toast="Link copiado">Copiar link</button>`)}
+      <div class="card" style="align-items:center;text-align:center;gap:10px">
+        <span class="eyebrow">Código da sala</span>
+        <div class="codigo num">KXPM</div>
+        <div class="qr"><canvas id="qr" aria-label="QR da sala"></canvas></div>
+        <p class="fine">Os amigos entram pelo código ou apontam a câmera.</p>
+      </div>
+      <div class="card flat">
+        <div class="linha" style="padding-top:14px"><span class="lbl grow">Na sala · 6</span>${S.host ? '<span class="fine">toque em ⋯ para promover ou remover</span>' : ''}</div>
+        ${J.map(j => `<div class="stack" style="gap:0"><div class="linha">${av(j)}<span class="nome grow">${esc(j.nome)}${j.id === 'eu' ? ' <span class="cap">(você)</span>' : ''}</span>${j.id === host ? '<span class="tag accent">anfitrião</span>' : ''}${S.host && j.id !== 'eu' ? `<button class="btn sm" data-menu="${j.id}" aria-label="Opções de ${esc(j.nome)}">⋯</button>` : ''}</div>${S.host ? menu(j.id) : ''}</div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="row"><span class="lbl grow">Regras da partida</span>${S.host ? `<button class="link" data-go="regras">Editar</button>` : ''}</div>
+        <p class="cap">${resumoRegras()}</p>
+        <div class="chips">${S.regras.cats.map(c => `<span class="chip ok">${esc(c)}</span>`).join('')}</div>
+      </div>
+      ${S.host ? `<button class="btn space" data-go="carta">Começar com 6 jogadores</button>` : `<div class="card space" style="align-items:center;text-align:center"><p class="lead">Aguardando ${esc(byId(host).nome)} começar</p><p class="fine">Você entra na partida assim que ele apertar começar.</p></div>`}
+    </div>`;
+  };
+
+  R.regras = () => {
+    const r = S.regras, seg = (k, vals, fmt) => `<div class="seg" data-regra="${k}">${vals.map(v => `<button data-v="${v}" class="${r[k] === v ? 'on' : ''}">${fmt ? fmt(v) : v}</button>`).join('')}</div>`;
+    return `
+    <div class="tela">
+      ${topbar(voltar('lobby', 'Lobby'), 'Regras', `<button class="link" data-go="lobby" data-toast="Regras salvas">Salvar</button>`)}
+      <div class="card">
+        <span class="lbl">Tema</span>
+        ${seg('tema', ['Futebol', 'Geral'])}
+        <span class="lbl" style="margin-top:6px">Categorias</span>
+        <div class="chips">${CATS[r.tema].map(c => `<button class="chip ${r.cats.includes(c) ? 'on' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>
+      </div>
+      <div class="card">
+        <span class="lbl">Impostores</span>
+        <div class="seg"><button class="on">1</button><button disabled>2 · em breve</button><button disabled>3 · em breve</button></div>
+        <span class="lbl" style="margin-top:6px">Rodadas de palavras antes da primeira votação</span>
+        ${seg('rodadas', [1, 2, 3])}
+      </div>
+      <div class="card">
+        <span class="lbl">Tempo para reagir a cada palavra</span>
+        ${seg('reacaoSeg', [5, 10, 15, 20], v => v + ' s')}
+        <span class="lbl" style="margin-top:6px">Tempo da vez</span>
+        ${seg('vezSeg', [30, 60, 90, 0], v => v ? v + ' s' : 'Sem tempo')}
+        <p class="fine">Sem tempo, o anfitrião pode pular quem travou.</p>
+      </div>
+      <div class="card">
+        <span class="lbl">Impostor vence se sobreviver a</span>
+        ${seg('teto', [2, 3, 4, 5], v => v + ' votações')}
+        <p class="fine">Cada votação que ele sobrevive libera uma dica melhor. Também vence se os inocentes vivos ficarem em igual número.</p>
+      </div>
+    </div>`;
+  };
+
+  R.carta = () => {
+    const imp = S.papel === 'impostor';
+    const conteudo = imp
+      ? `<div class="stack" style="gap:6px;align-items:center"><span class="eyebrow danger">Você é o impostor</span><div class="palavra">Blefe.</div><p class="cap">Ninguém sabe. Fale palavras que pareçam combinar.</p></div>
+         <div class="card" style="width:100%;text-align:left;margin-top:6px"><div class="row"><span class="lbl grow">Sua dica</span>${lvl(1)}</div><strong style="font-size:21px">${esc(SEGREDO.dicas[0])}</strong><span class="cap">${esc(SEGREDO.cat)}</span><p class="fine">Dicas melhores aparecem a cada votação que você sobreviver.</p></div>`
+      : `<div class="stack" style="gap:6px;align-items:center"><span class="eyebrow">A palavra é</span><div class="palavra">${esc(SEGREDO.palavra)}</div><p class="cap">Dê pistas sem entregar. Um de vocês não sabe.</p></div>`;
+    return `
+    <div class="tela">
+      ${topbar('<span class="tag">Partida 4</span>', 'Sua carta', '<span class="fine num">3 de 6 viram</span>')}
+      <div class="tile carta" id="carta" role="button" tabindex="0" aria-label="Toque para ver sua carta">
+        ${S.cartaAberta ? conteudo : `<div class="capa"><span class="olho">👁</span><strong>Toque para ver</strong><span class="cap">Não deixe ninguém olhar</span></div>`}
+      </div>
+      ${S.cartaAberta ? `<p class="cap" style="text-align:center">Toque de novo para esconder.</p>` : ''}
+      <div class="chips" style="justify-content:center">${J.map((j, i) => `<span class="chip ${i < 3 || S.cartaAberta && j.id === 'eu' ? 'on' : ''}">${i < 3 || S.cartaAberta && j.id === 'eu' ? '✓' : '…'} ${esc(nomeDe(j))}</span>`).join('')}</div>
+      <button class="btn space" data-go="vez-outro" ${S.cartaAberta ? '' : 'disabled'}>Pronto, estou com minha carta</button>
+    </div>`;
+  };
+
+  R['vez-outro'] = () => {
+    const vez = byId('dani'), seg = S.regras.vezSeg;
+    return `
+    <div class="tela">
+      ${topbar('<span class="tag">Rodada 1 de 2</span>', 'Palavras', `<button class="link" data-carta="1">Minha carta</button>`)}
+      <div class="tela centro" style="min-height:0;gap:14px;padding-block:18px">
+        <span class="eyebrow">Agora é a vez de</span>
+        ${av(vez, 'xl')}
+        <h1 class="hero">${esc(vez.nome)}</h1>
+        <p class="lead">Ela fala a palavra e digita aqui. Fique de olho.</p>
+        ${seg ? ring(seg) : '<span class="tag">Sem tempo</span>'}
+        ${S.host ? `<button class="btn sm" data-go="vez-minha" data-toast="Dani pulada">Pular ${esc(vez.nome)}</button>` : ''}
+      </div>
+      <div class="card flat">
+        ${ORDEM.map(id => { const j = byId(id), w = PALAVRAS[id][0]; return `<div class="linha">${av(j, 'sm')}<span class="nome grow">${esc(nomeDe(j))}</span>${w ? `<strong>${esc(w)}</strong><span class="fine num">${REACOES[id][0]} 👍 ${REACOES[id][1]} 👎</span>` : id === 'dani' ? '<span class="tag accent">falando</span>' : '<span class="fine">aguardando</span>'}</div>`; }).join('')}
+      </div>
+    </div>`;
+  };
+
+  R['vez-minha'] = () => `
+    <div class="tela">
+      ${topbar('<span class="tag">Rodada 1 de 2</span>', 'Palavras', `<button class="link" data-carta="1">Minha carta</button>`)}
+      <div class="tela centro" style="min-height:0;gap:12px;padding-block:18px">
+        <span class="eyebrow accent">Sua vez</span>
+        <h1 class="hero">Fale uma palavra</h1>
+        <p class="lead">Diga em voz alta e anote aqui. A rodada só segue depois que você enviar.</p>
+        ${S.regras.vezSeg ? ring(S.regras.vezSeg) : '<span class="tag">Sem tempo</span>'}
+      </div>
+      <div class="card flat">
+        ${ORDEM.filter(id => PALAVRAS[id][0]).map(id => { const j = byId(id); return `<div class="linha">${av(j, 'sm')}<span class="nome grow">${esc(nomeDe(j))}</span><strong>${esc(PALAVRAS[id][0])}</strong></div>`; }).join('')}
+      </div>
+      <form class="card space" id="fPalavra" style="gap:10px">
+        <div class="row"><input class="field grow" id="minha" maxlength="30" autocomplete="off" placeholder="Sua palavra" value="${esc(S.minhaPalavra)}"><button class="btn" type="submit" style="width:auto;padding-inline:22px">Enviar</button></div>
+        <p class="fine">Até 30 caracteres. Depois de enviar não dá pra editar.</p>
+      </form>
+    </div>`;
+
+  R.reacao = () => {
+    const de = byId(S.reacaoDe), palavra = S.reacaoDe === 'eu' ? (S.minhaPalavra || 'Longevo') : PALAVRAS[S.reacaoDe][0];
+    const minha = S.reacaoDe === 'eu';
+    const r = REACOES[S.reacaoDe] || [0, 0, 0];
+    const btn = (i, face, rot) => `<button class="emoji ${S.reacao === i ? 'on' : ''}" data-reacao="${i}" ${minha ? 'disabled' : ''} aria-label="${rot}"><span class="face">${face}</span><span class="n" id="n${i}">${r[i]}</span></button>`;
+    return `
+    <div class="tela">
+      ${topbar('<span class="tag">Rodada 1 de 2</span>', 'Palavra', `<button class="link" data-carta="1">Minha carta</button>`)}
+      <div class="tile" style="align-items:center;text-align:center;gap:14px;padding-block:34px">
+        <div class="row" style="justify-content:center">${av(de, 'sm')}<span class="cap">${esc(nomeDe(de))} ${minha ? 'disse' : 'disse'}</span></div>
+        <div class="palavra">${esc(palavra)}</div>
+        ${ring(S.regras.reacaoSeg, 64)}
+      </div>
+      <div class="stack" style="gap:10px;text-align:center">
+        <span class="eyebrow">${minha ? 'Os outros estão reagindo' : 'O que você achou?'}</span>
+        <div class="emojis">${btn(0, '👍', 'Curti')}${btn(1, '👎', 'Suspeito')}${btn(2, '😐', 'Tanto faz')}</div>
+        <p class="fine">Só a contagem aparece. Ninguém vê quem reagiu.</p>
+      </div>
+      <p class="cap space" style="text-align:center">Em seguida: ${S.reacaoDe === 'eu' ? 'votação' : 'sua vez'}</p>
+    </div>`;
+  };
+
+  R.votacao = () => `
+    <div class="tela">
+      ${topbar('<span class="tag">Votação 1</span>', 'Quem é o impostor?', `<button class="link" data-carta="1">Minha carta</button>`)}
+      <p class="lead">Voto secreto. Ninguém vê nada até todos votarem. Empate: ninguém sai.</p>
+      <div class="stack">
+        ${J.filter(j => j.id !== 'eu').map(j => { const ws = PALAVRAS[j.id]; return `<button class="voto ${S.voto === j.id ? 'on' : ''}" data-voto="${j.id}">${av(j)}<span class="stack grow" style="gap:0"><span class="nome">${esc(j.nome)}</span><span class="fine">${ws[0] ? esc(ws[0]) + ' · ' + REACOES[j.id][0] + ' 👍 ' + REACOES[j.id][1] + ' 👎' : 'ainda sem palavra'}</span></span><span class="rad"></span></button>`; }).join('')}
+      </div>
+      <div class="chips" style="justify-content:center">${J.map((j, i) => `<span class="chip ${i === 1 || i === 2 ? 'on' : ''}">${i === 1 || i === 2 ? '✓' : '…'} ${esc(nomeDe(j))}</span>`).join('')}</div>
+      <button class="btn space" data-go="votacao-espera" ${S.voto ? '' : 'disabled'}>${S.voto ? 'Confirmar voto em ' + esc(byId(S.voto).nome) : 'Escolha alguém'}</button>
+    </div>`;
+
+  R['votacao-espera'] = () => `
+    <div class="tela">
+      ${topbar('<span class="tag">Votação 1</span>', 'Quem é o impostor?', '')}
+      <div class="tela centro" style="min-height:0;gap:10px;padding-block:28px">
+        <span class="eyebrow">Seu voto</span>
+        ${av(byId(S.voto || 'dani'), 'xl')}
+        <h1>${esc(byId(S.voto || 'dani').nome)}</h1>
+        <p class="lead">Registrado. Aguardando os outros.</p>
+      </div>
+      <div class="card" style="align-items:center">
+        <strong class="num" id="votCont">3 de 6 votaram</strong>
+        <div class="chips" style="justify-content:center" id="votChips">${J.map((j, i) => `<span class="chip ${i <= 2 ? 'on' : ''}" data-vc="${j.id}">${i <= 2 ? '✓' : '…'} ${esc(nomeDe(j))}</span>`).join('')}</div>
+      </div>
+      <p class="fine space" style="text-align:center">A apuração começa sozinha quando o último votar.</p>
+    </div>`;
+
+  R.apuracao = () => {
+    const votos = VOTOS(), votantes = J;
+    const cont = {}; Object.values(votos).forEach(v => cont[v] = (cont[v] || 0) + 1);
+    const ordem = Object.keys(cont).sort((a, b) => cont[b] - cont[a]);
+    const pegou = S.apur === 'impostor';
+    return `
+    <div class="tela">
+      ${topbar('<span class="tag">Votação 1</span>', 'Apuração', `<button class="link" data-go="apuracao">Repetir</button>`)}
+      <p class="lead" id="apTxt">Virando os votos…</p>
+      <div class="vgrid">${votantes.map(v => { const alvo = byId(votos[v.id]); return `<div class="vcard" data-vc="${v.id}" data-alvo="${alvo.id}"><div class="inner"><div class="face f1">${av(v, 'sm')}<span class="q">?</span><span class="cap">${esc(nomeDe(v))}</span></div><div class="face f2">${av(alvo)}<span class="cap">${esc(nomeDe(v))} votou</span><strong style="font-size:14px">${esc(alvo.nome)}</strong></div></div></div>`; }).join('')}</div>
+      <div class="card tally" id="tally">${ordem.map(id => `<div class="it" data-t="${id}">${av(byId(id), 'sm')}<span class="nome" style="width:72px">${esc(byId(id).nome)}</span><span class="bar"><i class="fill"></i></span><span class="n num">0</span></div>`).join('')}</div>
+      <div class="veredito stack space" id="veredito" style="gap:10px;text-align:center">
+        <span class="eyebrow ${pegou ? 'accent' : 'danger'}">${pegou ? 'Pegaram o impostor' : 'Eliminada'}</span>
+        <h1>Dani era ${pegou ? 'o impostor' : 'inocente'}</h1>
+        <p class="lead">${pegou ? 'A palavra era ' + esc(SEGREDO.palavra) + '. Inocentes venceram.' : 'Ela sai do jogo. O impostor segue entre vocês.'}</p>
+        <button class="btn ${pegou ? '' : 'sec'}" data-go="${pegou ? 'fim' : 'impostor-segue'}" ${pegou ? 'data-set="fim:inocentes"' : ''}>${pegou ? 'Ver resultado' : 'Continuar'}</button>
+      </div>
+    </div>`;
+  };
+
+  R['impostor-segue'] = () => {
+    const imp = S.papel === 'impostor';
+    return `
+    <div class="tela">
+      ${topbar('<span class="tag">Votação 1</span>', 'Resultado', '')}
+      <div class="tile" style="align-items:center;text-align:center;gap:12px;padding-block:36px">
+        ${av(byId('dani'), 'lg fora')}
+        <span class="eyebrow" style="color:var(--danger)">Dani era inocente</span>
+        <h1 class="hero">Um impostor ainda está entre nós</h1>
+        <p class="lead">Mais uma rodada de palavras e nova votação. Sobraram 5 de vocês.</p>
+      </div>
+      ${imp ? `<div class="card"><div class="row"><span class="lbl grow">Nova dica desbloqueada</span>${lvl(2)}</div><strong style="font-size:21px">${esc(SEGREDO.dicas[1])}</strong><p class="fine">Você sobreviveu a 1 de ${S.regras.teto} votações. Sobreviva a todas e vence.</p></div>`
+            : `<div class="card"><div class="row"><span class="lbl grow">Impostor</span><span class="tag danger">1 de ${S.regras.teto} votações sobrevividas</span></div><p class="cap">Ele acabou de ganhar uma dica melhor. Fica mais difícil a cada votação.</p></div>`}
+      <div class="card flat">
+        ${J.map(j => `<div class="linha">${av(j, 'sm ' + (j.id === 'dani' ? 'fora' : ''))}<span class="nome grow" style="${j.id === 'dani' ? 'color:var(--muted2);text-decoration:line-through' : ''}">${esc(nomeDe(j))}</span>${j.id === 'dani' ? '<span class="tag">eliminada</span>' : ''}</div>`).join('')}
+      </div>
+      <div class="stack space" style="gap:8px;text-align:center"><p class="cap">Rodada 2 começa em <strong class="num" id="segCont">6</strong> s</p><div class="prog"><i id="segBar"></i></div></div>
+    </div>`;
+  };
+
+  R.fim = () => {
+    const ino = S.fim === 'inocentes';
+    const placar = [['Tucho', 12], ['Augusto', 11], ['Marcos', 9], ['Isaac', 8], ['Dvd', 6], ['Dani', 4]];
+    return `
+    <div class="tela">
+      ${topbar('<span class="tag">Partida 4</span>', 'Fim', '')}
+      <div class="tile" style="align-items:center;text-align:center;gap:12px;padding-block:40px">
+        <span class="eyebrow" style="color:${ino ? 'var(--accent)' : 'var(--danger)'}">${ino ? 'Pegaram o impostor' : 'Sobreviveu a 3 votações'}</span>
+        <h1 class="hero">${ino ? 'Inocentes venceram' : 'O impostor venceu'}</h1>
+        <div class="row" style="justify-content:center;gap:10px;margin-top:6px">${av(byId('tucho'), 'lg')}<span class="stack" style="gap:0;text-align:left"><span class="cap">O impostor era</span><strong style="font-size:21px">Tucho</strong></span></div>
+      </div>
+      <div class="card" style="align-items:center;text-align:center;gap:4px">
+        <span class="eyebrow">A palavra era</span>
+        <div class="palavra" style="font-size:34px">${esc(SEGREDO.palavra)}</div>
+        <span class="cap">${esc(SEGREDO.cat)} · dica do impostor: ${esc(SEGREDO.dicas[0])}</span>
+      </div>
+      <div class="card flat">
+        <div class="linha" style="padding-top:14px"><span class="lbl grow">Placar da noite</span><span class="fine">inocente +1 · impostor +2</span></div>
+        ${placar.map(([n, p], i) => `<div class="linha"><span class="fine num" style="width:20px">${i + 1}</span><span class="nome grow">${esc(n)}</span>${(ino ? n !== 'Tucho' : n === 'Tucho') ? `<span class="tag accent">+${ino ? 1 : 2}</span>` : ''}<strong class="num" style="width:40px;text-align:right">${p}</strong></div>`).join('')}
+      </div>
+      <div class="stack space" style="gap:8px;text-align:center"><p class="cap">Voltando ao lobby em <strong class="num" id="fimCont">8</strong> s</p><div class="prog"><i id="fimBar"></i></div><button class="btn ghost" data-go="lobby">Ir agora</button></div>
+    </div>`;
+  };
+
+  R.ranking = () => {
+    const rows = [['Tucho', 31, 19, 24], ['Augusto', 28, 16, 21], ['Marcos', 23, 14, 19], ['Isaac', 19, 10, 13], ['Dvd', 26, 12, 15], ['Dani', 14, 6, 7]];
+    rows.sort((a, b) => (b[2] / b[1]) - (a[2] / a[1]));
+    return `
+    <div class="tela">
+      ${topbar(voltar('inicio', 'Início'), 'Ranking', '')}
+      <div class="seg"><button class="on">Impostor</button><button>Como impostor</button><button>Como inocente</button></div>
+      <div class="card">
+        <table class="rk"><thead><tr><th>Jogador</th><th>Jogos</th><th>Vitórias</th><th>Pts</th></tr></thead><tbody>
+        ${rows.map(([n, j, v, p], i) => `<tr><td><span class="row" style="gap:10px"><span class="pos num">${i + 1}</span>${av({ id: n === 'Marcos' ? 'eu' : n, nome: n }, 'sm')}<span class="nome">${esc(n)}</span></span></td><td>${j}</td><td><strong>${Math.round(v / j * 100)}%</strong> <span class="fine">${v}</span></td><td>${p}</td></tr>`).join('')}
+        </tbody></table>
+        <p class="fine">Só partidas com login contam. Visitantes aparecem no placar da noite, não aqui.</p>
+      </div>
+    </div>`;
+  };
+
+  // ---------- comportamentos por tela ----------
+  const A = {};
+  A.lobby = () => { qrFake('KXPM'); app.querySelectorAll('[data-menu]').forEach(b => b.onclick = () => { S.menuAberto = S.menuAberto === b.dataset.menu ? null : b.dataset.menu; render(); }); app.querySelectorAll('[data-act]').forEach(b => b.onclick = () => { const j = byId(b.dataset.id); S.menuAberto = null; if (b.dataset.act === 'promover') { S.host = false; toast(j.nome + ' agora é o anfitrião'); } else toast(j.nome + ' removido da sala'); render(); }); };
+  A.regras = () => {
+    app.querySelectorAll('[data-regra] button').forEach(b => b.onclick = () => { const k = b.closest('[data-regra]').dataset.regra; const v = b.dataset.v; S.regras[k] = isNaN(+v) ? v : +v; if (k === 'tema') S.regras.cats = CATS[v].slice(0, 3); render(); });
+    app.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => { const c = b.dataset.cat, at = S.regras.cats; if (at.includes(c)) { if (at.length === 1) return toast('Deixe pelo menos uma categoria'); S.regras.cats = at.filter(x => x !== c); } else S.regras.cats = [...at, c]; render(); });
+  };
+  A.perfil = () => { app.querySelectorAll('[data-opt=tema] button').forEach(b => b.onclick = () => { S.tema = b.dataset.v; aplicarTema(); render(); }); const i = document.getElementById('nomeEx'); if (i) i.oninput = () => { S.nome = i.value.trim() || 'Marcos'; }; };
+  A.login = () => { const i = document.getElementById('nomeVis'); if (i) { i.focus(); i.oninput = () => { S.nome = i.value.trim() || 'Visitante'; }; } };
+  A.carta = () => { const c = document.getElementById('carta'); c.onclick = () => { S.cartaAberta = !S.cartaAberta; render(); }; c.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); c.click(); } }; };
+  A['vez-outro'] = () => { if (S.regras.vezSeg) contar(S.regras.vezSeg, () => { toast('Tempo esgotado: Dani foi pulada'); go('vez-minha'); }); T.set(() => { S.reacaoDe = 'dani'; S.reacao = null; go('reacao'); }, 5200); };
+  A['vez-minha'] = () => { const f = document.getElementById('fPalavra'), i = document.getElementById('minha'); i.focus(); if (S.regras.vezSeg) contar(S.regras.vezSeg, () => { toast('Tempo esgotado: sua vez foi pulada'); S.reacaoDe = 'eu'; S.minhaPalavra = ''; go('reacao'); }); f.onsubmit = e => { e.preventDefault(); const t = i.value.trim(); if (!t) return toast('Digite a palavra que você falou'); S.minhaPalavra = t; S.reacaoDe = 'eu'; S.reacao = null; go('reacao'); }; };
+  A.reacao = () => {
+    const r = (REACOES[S.reacaoDe] || [0, 0, 0]).slice(), base = r.slice();
+    app.querySelectorAll('[data-reacao]').forEach(b => b.onclick = () => { const i = +b.dataset.reacao; if (S.reacao === i) return; if (S.reacao !== null) r[S.reacao]--; S.reacao = i; r[i]++; app.querySelectorAll('.emoji').forEach(x => x.classList.toggle('on', +x.dataset.reacao === i)); [0, 1, 2].forEach(k => document.getElementById('n' + k).textContent = r[k]); });
+    if (S.reacaoDe === 'eu') { REACOES.eu = [0, 0, 0]; [0, 1, 2].forEach(k => document.getElementById('n' + k).textContent = 0); r[0] = r[1] = r[2] = 0; }
+    [900, 1800, 2600, 3900, 5100].forEach((ms, k) => T.set(() => { const i = [0, 0, 1, 2, 0][k]; r[i]++; const el = document.getElementById('n' + i); if (el) el.textContent = r[i]; }, ms));
+    contar(S.regras.reacaoSeg, () => { if (S.reacaoDe === 'eu') { S.voto = null; go('votacao'); } else go('vez-minha'); });
+  };
+  A.votacao = () => app.querySelectorAll('[data-voto]').forEach(b => b.onclick = () => { S.voto = b.dataset.voto; render(); });
+  A['votacao-espera'] = () => { let n = 3; const ids = ['dvd', 'isaac', 'tucho']; ids.forEach((id, k) => T.set(() => { n++; const c = document.getElementById('votCont'); if (c) c.textContent = n + ' de 6 votaram'; const ch = document.querySelector(`[data-vc="${id}"]`); if (ch) { ch.classList.add('on'); ch.textContent = '✓ ' + byId(id).nome; } if (n === 6) T.set(() => go('apuracao'), 700); }, 900 * (k + 1))); };
+  A.apuracao = () => {
+    const votos = VOTOS(), cards = [...app.querySelectorAll('.vcard')], cont = {};
+    const txt = document.getElementById('apTxt');
+    cards.forEach((c, k) => T.set(() => { c.classList.add('on'); const alvo = c.dataset.alvo; cont[alvo] = (cont[alvo] || 0) + 1; const it = document.querySelector(`[data-t="${alvo}"]`); if (it) { it.querySelector('.n').textContent = cont[alvo]; it.querySelector('.fill').style.width = (cont[alvo] / 6 * 100) + '%'; } }, 650 * (k + 1)));
+    T.set(() => {
+      const max = Math.max(...Object.values(cont)), top = Object.keys(cont).filter(k => cont[k] === max);
+      if (txt) txt.textContent = top.length > 1 ? 'Empate: ninguém sai desta vez.' : byId(top[0]).nome + ' foi a mais votada.';
+      top.forEach(id => { const it = document.querySelector(`[data-t="${id}"]`); if (it) it.classList.add('lead', S.apur === 'impostor' ? 'bom' : ''); cards.filter(c => c.dataset.alvo === id).forEach(c => c.classList.add('alvo', S.apur === 'impostor' ? '' : 'ruim')); });
+    }, 650 * cards.length + 500);
+    T.set(() => { const v = document.getElementById('veredito'); if (v) v.classList.add('on'); if (S.apur === 'impostor') confete(); }, 650 * cards.length + 1700);
+  };
+  A['impostor-segue'] = () => { let n = 6; const bar = document.getElementById('segBar'); bar.style.width = '100%'; T.set(() => { bar.style.transition = 'width 6s linear'; bar.style.width = '0%'; }, 50); T.int(() => { n--; const c = document.getElementById('segCont'); if (c) c.textContent = n; if (n <= 0) { T.limpar(); go('vez-outro'); } }, 1000); };
+  A.fim = () => { if (S.fim === 'inocentes') confete(); let n = 8; const bar = document.getElementById('fimBar'); bar.style.width = '100%'; T.set(() => { bar.style.transition = 'width 8s linear'; bar.style.width = '0%'; }, 50); T.int(() => { n--; const c = document.getElementById('fimCont'); if (c) c.textContent = n; if (n <= 0) { T.limpar(); go('lobby'); } }, 1000); };
+
+  // ---------- navegação ----------
+  function render() {
+    T.limpar();
+    document.querySelectorAll('.confete').forEach(c => c.remove());
+    app.innerHTML = (R[S.tela] || R.login)();
+    app.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', e => { e.preventDefault(); aplicarSet(b); if (b.dataset.toast) toast(b.dataset.toast); go(b.dataset.go); }));
+    app.querySelectorAll('[data-rerender]').forEach(b => b.addEventListener('click', () => { aplicarSet(b); render(); }));
+    app.querySelectorAll('[data-toast]:not([data-go])').forEach(b => b.addEventListener('click', () => toast(b.dataset.toast)));
+    app.querySelectorAll('[data-carta]').forEach(b => b.addEventListener('click', () => toast(S.papel === 'impostor' ? 'Você é o impostor · dica: ' + SEGREDO.dicas[0] : 'Sua palavra: ' + SEGREDO.palavra)));
+    if (A[S.tela]) A[S.tela]();
+    atualizarPicker();
+  }
+  function aplicarSet(b) { if (!b.dataset.set) return; b.dataset.set.split(',').forEach(kv => { const [k, v] = kv.split(':'); S[k] = v === '1' ? true : v === '0' ? false : v; }); }
+  function go(tela) { S.tela = tela; if (tela === 'carta') S.cartaAberta = false; if (tela === 'lobby') S.menuAberto = null; if (tela === 'votacao') S.voto = null; window.scrollTo(0, 0); render(); }
+
+  // ---------- barra do protótipo ----------
+  const sheet = document.getElementById('sheet');
+  const idx = () => TELAS.findIndex(t => t[0] === S.tela);
+  function atualizarPicker() {
+    const i = idx(); document.getElementById('pMid').textContent = `${i + 1}/${TELAS.length} · ${TELAS[i][1]}`;
+    document.getElementById('pLista').innerHTML = TELAS.map(([id, nome], k) => `<button data-tela="${id}" class="${id === S.tela ? 'on' : ''}">${k + 1}. ${nome}</button>`).join('');
+    document.querySelectorAll('#pLista button').forEach(b => b.onclick = () => { sheet.classList.remove('on'); go(b.dataset.tela); });
+    const marcar = (id, v) => document.querySelectorAll('#' + id + ' button').forEach(b => b.classList.toggle('on', b.dataset.v === String(v)));
+    marcar('optTema', S.tema); marcar('optPapel', S.papel); marcar('optHost', S.host ? 1 : 0); marcar('optApur', S.apur); marcar('optFim', S.fim);
+  }
+  document.getElementById('pAnt').onclick = () => go(TELAS[(idx() - 1 + TELAS.length) % TELAS.length][0]);
+  document.getElementById('pProx').onclick = () => go(TELAS[(idx() + 1) % TELAS.length][0]);
+  document.getElementById('pMid').onclick = () => sheet.classList.add('on');
+  document.getElementById('pFechar').onclick = () => sheet.classList.remove('on');
+  sheet.addEventListener('click', e => { if (e.target === sheet) sheet.classList.remove('on'); });
+  const opt = (id, fn) => document.querySelectorAll('#' + id + ' button').forEach(b => b.onclick = () => { fn(b.dataset.v); render(); });
+  opt('optTema', v => { S.tema = v; aplicarTema(); });
+  opt('optPapel', v => { S.papel = v; S.cartaAberta = false; });
+  opt('optHost', v => { S.host = v === '1'; });
+  opt('optApur', v => { S.apur = v; });
+  opt('optFim', v => { S.fim = v; });
+
+  aplicarTema();
+  render();
+})();
+</script>
+</body>
+</html>
