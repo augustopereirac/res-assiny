@@ -98,6 +98,45 @@
     inp.focus();
   };
 
+  // ---------- clubes (jogo Alex) ----------
+  const nClube = {}; J.forEach(j => j.clubes.forEach(c => { nClube[c] = (nClube[c] || 0) + 1; }));
+  F.CLUBES = Object.entries(D.clubes).map(([id, v]) => ({ id: +id, nome: v[0], pais: v[1] || '', k: C.norm(v[0]), n: nClube[id] || 0 }));
+  F.clubePorId = Object.fromEntries(F.CLUBES.map(c => [c.id, c]));
+  F.buscarClube = (texto, n = 10) => {
+    const q = C.norm(texto); if (q.length < 2) return [];
+    const toks = q.split(' ').filter(Boolean);
+    return F.CLUBES.filter(c => { const w = c.k.split(' '); return toks.every(t => w.some(x => x.startsWith(t))); })
+      .sort((a, b) => (b.k === q) - (a.k === q) || b.n - a.n).slice(0, n);
+  };
+  // jogou no clube? (compara pelo id e, de reserva, pelo nome curto: o Wikidata às vezes tem dois itens para o mesmo clube)
+  F.jogouNoClube = (j, clubeId) => { const c = F.clubePorId[clubeId]; return j.clubes.has(clubeId) || (c && j.car.some(x => C.norm(x.nome) === c.k)); };
+  F.mesmoClube = (a, b) => a === b || (F.clubePorId[a] && F.clubePorId[b] && F.clubePorId[a].k === F.clubePorId[b].k);
+  F.ligarBuscaClube = (idBase, onEscolha) => {
+    const inp = document.getElementById(idBase), box = document.getElementById(idBase + '-sugs'), esc_ = document.getElementById(idBase + '-esc');
+    if (!inp) return;
+    let atual = null, lista = [], sel = 0;
+    const marcar = () => box.querySelectorAll('.sug').forEach((b, i) => b.classList.toggle('sel', i === sel));
+    const mostrar = () => {
+      lista = F.buscarClube(inp.value, 10); sel = 0;
+      box.innerHTML = lista.map(c => `<button type="button" class="sug" data-id="${c.id}"><strong>${esc(c.nome)}</strong><span class="muted small">${esc(c.pais)}</span></button>`).join('')
+        || (C.norm(inp.value).length >= 2 ? '<div class="muted small" style="padding:8px 4px">Nenhum clube com esse nome no banco.</div>' : '');
+      box.querySelectorAll('.sug').forEach((b, i) => { b.onclick = () => escolher(F.clubePorId[b.dataset.id]); b.onmouseenter = () => { sel = i; marcar(); }; });
+      marcar();
+    };
+    const escolher = c => { atual = c; lista = []; inp.value = c.nome; box.innerHTML = ''; esc_.innerHTML = `✔ <strong>${esc(c.nome)}</strong> <span class="muted small">${esc(c.pais)}</span>`; esc_.classList.remove('hidden'); onEscolha(c); };
+    const confirmar = () => { const b = document.getElementById('confirmar'); if (b && !b.disabled) b.click(); };
+    inp.oninput = () => { if (atual) { atual = null; esc_.classList.add('hidden'); onEscolha(null); } mostrar(); };
+    inp.onkeydown = e => {
+      if (e.key === 'ArrowDown' && lista.length) { e.preventDefault(); sel = (sel + 1) % lista.length; marcar(); }
+      else if (e.key === 'ArrowUp' && lista.length) { e.preventDefault(); sel = (sel - 1 + lista.length) % lista.length; marcar(); }
+      else if (e.key === 'Enter') { e.preventDefault(); if (lista.length) { escolher(lista[sel]); setTimeout(confirmar, 0); } else if (atual) confirmar(); }
+    };
+    inp.focus();
+  };
+  // selo do Alex (Alex de Souza, o "Alex Turco")
+  F.ALEX_ID = 507815;
+  F.seloAlex = id => id === F.ALEX_ID ? '<img src="alexturco.png" alt="Alex Turco" title="Alex Turco" class="selo-alex" style="width:36px;height:36px;border-radius:50%;vertical-align:middle;margin-left:8px">' : '';
+
   // ---------- Monta o Time: critérios e temas ----------
   const m = v => (v / 100).toFixed(2).replace('.', ',') + ' m';
   F.CRITERIOS = [

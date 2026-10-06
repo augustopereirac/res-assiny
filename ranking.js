@@ -9,7 +9,7 @@
     set(k, v) { try { localStorage.setItem('rk:' + k, JSON.stringify(v)); } catch (e) {} }
   };
   R.chave = n => C.norm(String(n || '')).replace(/[^a-z0-9]+/g, ' ').trim();
-  R.JOGOS = { nolimite: 'No Limite', top100: 'Top 100', qtl: 'Quem Tava Lá', impostor: 'Impostor', montatime: 'Monta o Time', carreira: 'De Quem É a Carreira?', ordene: 'Ordene a Carreira' };
+  R.JOGOS = { alex: 'Alex', nolimite: 'No Limite', top100: 'Top 100', qtl: 'Quem Tava Lá', impostor: 'Impostor', montatime: 'Monta o Time', carreira: 'De Quem É a Carreira?', ordene: 'Ordene a Carreira' };
 
   const api = (path, opts = {}) => fetch(cfg.supabaseUrl + '/rest/v1/' + path, {
     ...opts,

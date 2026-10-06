@@ -304,3 +304,7 @@ table.score.rank th{font-size:.75rem;color:var(--muted,#9aa);text-align:left;fon
 .x-rem{background:none;border:0;color:#8a8aa8;font-size:.85rem;cursor:pointer;padding:0 0 0 6px;opacity:.7}.x-rem:hover{opacity:1;color:#ff6b6b}
 .selo-donan{animation:donanPop .6s ease-out}
 .result .val{display:inline-flex;align-items:center;justify-content:flex-end}
+.cadeia{display:flex;flex-direction:column;align-items:stretch}
+.cadeia .elo{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:var(--bg2);border:1px solid var(--line)}
+.cadeia .elo.c{border-color:color-mix(in srgb,var(--accent2) 45%,var(--line))}
+.cadeia .seta{text-align:center;color:var(--muted);font-size:.8rem;line-height:1.2}
