@@ -69,6 +69,7 @@
       const era = ehHost; ehHost = false; aguardando = false; hs = 0; track();
       try { if (ss.get(`noite:souHost:${o.jogo}`) === o.codigo) sessionStorage.removeItem(`noite:souHost:${o.jogo}`); } catch (e) {}
       ch.send({ type: 'broadcast', event: 'acao', payload: { de: id, nome: o.nome, tipo: 'oi', dados: {} } });
+      barraTroca(null, false);
       if (o.onDeixarHost) o.onDeixarHost(era);
     }
     function avaliar() {
@@ -106,7 +107,7 @@
       },
       publicar(estado) {
         if (!ehHost) return;
-        ultimoEstado = estado; selo(estado);
+        ultimoEstado = estado; selo(estado); barraTroca(o.jogo, estado && ['lobby', 'final', 'fim'].includes(estado.fase));
         ch.send({ type: 'broadcast', event: 'estado', payload: estado });
         if (o.onEstado) o.onEstado(estado);
         enviarSnap();
@@ -129,11 +130,25 @@
         return membros().filter(m => !expulsos.has(m.id)).map(m => ({ id: m.id, nome: m.nome || '?', host: !!m.host, t: m.t || 0 }))
           .sort((a, b) => (b.host - a.host) || (a.t - b.t));
       },
-      sair() { fora = true; try { ch.untrack(); sb.removeChannel(ch); } catch (e) {} }
+      sair() { fora = true; try { ch.untrack(); sb.removeChannel(ch); } catch (e) {} },
+      // anfitrião leva todo mundo da sala para outro jogo, com o mesmo código
+      trocarJogo(jogo) {
+        if (!ehHost) return;
+        const g = JOGOS_SALA.find(x => x.jogo === jogo); if (!g) return;
+        const t = { jogo: g.jogo, pagina: g.pagina, t: Date.now() };
+        ultimoEstado = { ...(ultimoEstado || {}), __trocar: t };
+        ch.send({ type: 'broadcast', event: 'estado', payload: ultimoEstado });
+        ch.send({ type: 'broadcast', event: 'trocar', payload: t });
+        try { localStorage.removeItem(`noite:host:${g.jogo}:${o.codigo}`); } catch (e) {}
+        ss.set(`noite:souHost:${g.jogo}`, o.codigo);
+        setTimeout(() => irPara(t), 900);
+      }
     };
+    const irPara = t => { if (fora && !ehHost) return; fora = true; ss.set('noite:auto', o.codigo); ss.set('noite:autoNome', o.nome); try { ch.untrack(); } catch (e) {} location.href = `${t.pagina}?sala=${o.codigo}`; };
 
     const selo = e => { if (global.Ranking && e) global.Ranking.badge(!!(e.cfg && e.cfg.treino)); };
-    ch.on('broadcast', { event: 'estado' }, ({ payload }) => { if (fora) return; selo(payload); if (!ehHost && o.onEstado) o.onEstado(payload); });
+    ch.on('broadcast', { event: 'estado' }, ({ payload }) => { if (fora) return; if (payload && payload.__trocar) { if (!ehHost) irPara(payload.__trocar); return; } selo(payload); if (!ehHost && o.onEstado) o.onEstado(payload); });
+    ch.on('broadcast', { event: 'trocar' }, ({ payload }) => { if (!ehHost && payload && payload.pagina) irPara(payload); });
     ch.on('broadcast', { event: 'snap' }, ({ payload }) => {
       if (ehHost || !payload) return;
       snap = payload;
@@ -195,6 +210,37 @@
     });
     global.__salaAtual = api;
     return api;
+  }
+
+  // ---------- trocar de jogo sem sair da sala ----------
+  const JOGOS_SALA = [
+    { jogo: 'alex', pagina: 'alex-sala.html', nome: 'Alex', ic: '🇹🇷' },
+    { jogo: 'mimica', pagina: 'mimica-sala.html', nome: 'Mímica', ic: '🎭' },
+    { jogo: 'nolimite', pagina: 'nolimite-sala.html', nome: 'No Limite', ic: '🎯' },
+    { jogo: 'top100', pagina: 'top100-sala.html', nome: 'Top 100', ic: '💯' },
+    { jogo: 'qtl', pagina: 'qtl-sala.html', nome: 'Quem Tava Lá', ic: '🕵️' },
+    { jogo: 'impostor', pagina: 'impostor-sala.html', nome: 'Impostor', ic: '🤫' },
+    { jogo: 'montatime', pagina: 'montatime-sala.html', nome: 'Monta o Time', ic: '📋' },
+    { jogo: 'carreira', pagina: 'carreira-sala.html', nome: 'De Quem É a Carreira?', ic: '🧭' },
+    { jogo: 'ordene', pagina: 'ordene-sala.html', nome: 'Ordene a Carreira', ic: '🔢' }
+  ];
+  function barraTroca(atual, mostrar) {
+    if (!global.document) return;
+    let b = document.getElementById('barraTroca');
+    if (!mostrar) { if (b) b.remove(); return; }
+    if (b) return;
+    b = document.createElement('div'); b.id = 'barraTroca'; b.className = 'barra-troca';
+    b.innerHTML = '<button class="btn secondary" type="button" id="abrirTroca">🎮 Trocar de jogo (mesma sala)</button>';
+    document.body.appendChild(b);
+    b.querySelector('#abrirTroca').onclick = () => {
+      const fundo = document.createElement('div'); fundo.className = 'troca-fundo';
+      fundo.innerHTML = `<div class="troca-box"><div class="label">Levar todo mundo da sala para:</div>
+        ${JOGOS_SALA.filter(g => g.jogo !== atual).map(g => `<button type="button" class="btn secondary" data-troca="${g.jogo}">${g.ic} ${C.esc(g.nome)}</button>`).join('')}
+        <button type="button" class="btn ghost" id="fecharTroca">Cancelar</button></div>`;
+      document.body.appendChild(fundo);
+      fundo.querySelector('#fecharTroca').onclick = () => fundo.remove();
+      fundo.querySelectorAll('[data-troca]').forEach(x => x.onclick = () => { x.disabled = true; x.textContent = 'Levando todo mundo…'; global.__salaAtual && global.__salaAtual.trocarJogo(x.dataset.troca); });
+    };
   }
 
   // Aviso para o anfitrião quando alguém da partida saiu da sala (o jogo não trava esperando por ele).
@@ -297,6 +343,9 @@
     const params = new URLSearchParams(location.search);
     const codigoUrl = normCodigo(params.get('sala'));
     let nome = C.store.get('meuNome', '');
+    // veio de "Trocar de jogo": entra direto na mesma sala, com o mesmo nome
+    const nomeAuto = ss.get('noite:autoNome') || nome;
+    if (codigoUrl && nomeAuto && ss.get('noite:auto') === codigoUrl) { try { sessionStorage.removeItem('noite:auto'); } catch (e) {} return cb(nomeAuto, codigoUrl, false); }
     app.innerHTML = `
       <div class="topbar"><a class="link-back" href="index.html">← Jogos</a></div>
       <div class="modo-toggle"><a href="${voltarHref}">📱 Um celular</a><span class="on">📲 Vários celulares</span></div>

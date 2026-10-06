@@ -308,3 +308,10 @@ table.score.rank th{font-size:.75rem;color:var(--muted,#9aa);text-align:left;fon
 .cadeia .elo{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:var(--bg2);border:1px solid var(--line)}
 .cadeia .elo.c{border-color:color-mix(in srgb,var(--accent2) 45%,var(--line))}
 .cadeia .seta{text-align:center;color:var(--muted);font-size:.8rem;line-height:1.2}
+
+.barra-troca{position:fixed;left:0;right:0;bottom:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(transparent,rgba(13,13,23,.96) 30%);z-index:40;display:flex;justify-content:center}
+.barra-troca .btn{max-width:520px;margin:0}
+body:has(.barra-troca) .wrap{padding-bottom:90px}
+.troca-fundo{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:60;display:flex;align-items:flex-end;justify-content:center}
+.troca-box{background:#16162a;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));width:100%;max-width:560px;max-height:85vh;overflow:auto}
+.troca-box .btn{margin:6px 0}
