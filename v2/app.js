@@ -9,6 +9,10 @@
   const ls = { get(k, d) { try { const v = localStorage.getItem('imp2:' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem('imp2:' + k, JSON.stringify(v)); } catch (e) {} } };
   const T = { ids: [], set(f, ms) { const i = setTimeout(f, ms); this.ids.push(i); return i; }, int(f, ms) { const i = setInterval(f, ms); this.ids.push(i); return i; }, limpar() { this.ids.forEach(i => { clearTimeout(i); clearInterval(i); }); this.ids = []; } };
   const CFG_PADRAO = () => ({ grupo: 'Futebol', cats: CATS('Futebol'), impostores: 1, rodadas: 2, reacaoSeg: 10, vezSeg: 60, teto: 3, treino: false });
+  // reações possíveis a uma palavra (índice = posição no array)
+  const RE = [['❤️', 'Amei'], ['👍', 'Curti'], ['😐', 'Tanto faz'], ['👎', 'Suspeito'], ['😡', 'Odiei']];
+  const R0 = () => RE.map(() => 0);
+  const htmlR = r => { const s = RE.map((x, i) => ((r || [])[i] || 0) ? `${x[0]} ${r[i]}` : '').filter(Boolean).join(' · '); return s || 'sem reações'; };
 
   // ---------- tema (por celular) ----------
   let tema = ls.get('tema', 'dark');
@@ -18,7 +22,7 @@
 
   // ---------- estado local ----------
   let sala = null, souHost = false, estado = null, presentes = [], carta = null, cartaAberta = false;
-  let meuVoto = null, escolha = null, minhaReacao = null, telaLocal = null, menuAberto = null, animKey = null, confeteKey = null, ultimaFase = null;
+  let meuVoto = null, escolha = null, minhaReacao = null, pendente = null, telaLocal = null, menuAberto = null, animKey = null, confeteKey = null, ultimaFase = null;
   let H = null, tPrazo = null;
 
   // ---------- util ----------
@@ -55,6 +59,12 @@
     tick(); T.int(tick, 250);
   }
   function htmlQR(texto) { try { const qr = window.qrcode(0, 'M'); qr.addData(texto); qr.make(); return `<div class="qr">${qr.createSvgTag({ cellSize: 5, margin: 2, scalable: true })}</div>`; } catch (e) { return ''; } }
+  // emoji sobe na tela quando alguém reage (sem nome, igual reação de chamada de vídeo)
+  function voar(emoji, delay) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let box = document.getElementById('voo'); if (!box) { box = document.createElement('div'); box.id = 'voo'; box.className = 'voo'; document.body.appendChild(box); }
+    setTimeout(() => { const e = document.createElement('span'); e.textContent = emoji; e.style.left = (12 + Math.random() * 76) + '%'; e.style.animationDuration = (1.9 + Math.random() * .8) + 's'; box.appendChild(e); setTimeout(() => e.remove(), 3000); }, delay || 0);
+  }
   function confete() {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const c = document.createElement('canvas'); c.className = 'confete'; document.body.appendChild(c);
@@ -117,7 +127,11 @@
       onEstado: e => {
         if (!estado || e.partida !== estado.partida) { cartaAberta = false; meuVoto = null; escolha = null; minhaReacao = null; animKey = null; if (estado) carta = null; }
         if (estado && e.votacaoN !== estado.votacaoN) { meuVoto = null; escolha = null; }
-        if (estado && e.palavraAtual !== estado.palavraAtual) minhaReacao = null;
+        if (estado && e.fase === 'reacao' && estado.fase === 'reacao' && e.palavraAtual === estado.palavraAtual && e.palavraAtual != null) {
+          const a = (estado.palavras[e.palavraAtual] || {}).r || [], b = (e.palavras[e.palavraAtual] || {}).r || [];
+          b.forEach((n, i) => { let d = n - (a[i] || 0); if (pendente === i && d > 0) { d--; pendente = null; } for (let k = 0; k < d; k++) voar(RE[i][0], k * 140); });
+        }
+        if (estado && e.palavraAtual !== estado.palavraAtual) { minhaReacao = null; pendente = null; }
         if (e.fase === 'lobby') { carta = null; cartaAberta = false; }
         estado = e; desenhar();
       },
@@ -162,7 +176,7 @@
     Sala.salvarHost(JOGO, sala.codigo, H);
     sala.publicar(publico());
     armar();
-    Sala.barraAusentes(['cartas', 'vez', 'reacao', 'votacao'].includes(H.fase) ? H.vivos || [] : [], presentes, nomeDe, tirar);
+    Sala.barraAusentes(['cartas', 'vez', 'reacao', 'discussao', 'votacao'].includes(H.fase) ? H.vivos || [] : [], presentes, nomeDe, tirar);
   }
   function reenviarCartas() { if (H && H.cartas && sala) Object.entries(H.cartas).forEach(([id, c]) => sala.privado(id, c)); }
 
@@ -173,8 +187,12 @@
     else if (msg.tipo === 'palavra' && H.fase === 'vez' && de === H.falante) { const t = String(d.texto || '').trim().slice(0, 30); if (t) receberPalavra(de, t); }
     else if (msg.tipo === 'reacao' && H.fase === 'reacao') {
       const p = H.palavras[H.palavraAtual], i = +d.i;
-      if (!p || p.de === de || !H.vivos.includes(de) || d.idx !== H.palavraAtual || ![0, 1, 2].includes(i)) return;
-      p.reacoes[de] = i; p.r = [0, 0, 0]; Object.values(p.reacoes).forEach(k => p.r[k]++); publicar();
+      if (!p || p.de === de || !H.vivos.includes(de) || d.idx !== H.palavraAtual || !(i >= 0 && i < RE.length)) return;
+      p.reacoes[de] = i; p.r = R0(); Object.values(p.reacoes).forEach(k => p.r[k]++);
+      // todos que podiam reagir já reagiram: não precisa esperar o tempo acabar
+      const todos = H.vivos.filter(id => id !== p.de).every(id => p.reacoes[id] !== undefined);
+      if (todos && H.prazo && H.prazo - Date.now() > 1300) prazo(H.prazoKey, 1300);
+      publicar();
     }
     else if (msg.tipo === 'voto' && H.fase === 'votacao' && H.vivos.includes(de) && H.vivos.includes(d.em) && d.em !== de) {
       H.votos[de] = d.em;
@@ -214,7 +232,7 @@
   const prazoVez = () => prazo('vez-' + H.partida + '-' + H.rodada + '-' + H.falante, H.cfg.vezSeg ? H.cfg.vezSeg * 1000 : 0);
   function irPalavras() { H.rodada = 1; H.falante = primeiroVivo(); H.fase = 'vez'; prazoVez(); publicar(); }
   function receberPalavra(de, texto) {
-    H.palavras.push({ rodada: H.rodada, de, texto, reacoes: {}, r: [0, 0, 0] });
+    H.palavras.push({ rodada: H.rodada, de, texto, reacoes: {}, r: R0() });
     H.palavraAtual = H.palavras.length - 1;
     H.fase = 'reacao'; prazo('reacao-' + H.partida + '-' + H.palavraAtual, (H.cfg.reacaoSeg || 10) * 1000);
     publicar();
@@ -223,13 +241,13 @@
     const prox = depoisDe(H.falante);
     if (prox) { H.falante = prox; H.fase = 'vez'; prazoVez(); }
     else if (H.rodada < H.rodadasAlvo) { H.rodada++; H.falante = primeiroVivo(); H.fase = 'vez'; prazoVez(); }
-    else { abrirVotacao(); return; }
+    else { H.fase = 'discussao'; H.falante = null; prazo(null); }
     publicar();
   }
   function pular() { if (H.fase !== 'vez') return; toast(nomeDe(H.falante) + ' pulou a vez.'); proximoFalante(); }
   function abrirVotacao() {
     H.votacaoN = (H.votacaoN || 0) + 1; H.votos = {}; H.fase = 'votacao';
-    prazo('vot-' + H.partida + '-' + H.votacaoN, H.cfg.vezSeg ? Math.max(60, H.cfg.vezSeg) * 1000 : 0);
+    prazo(null);
     publicar();
   }
   const durApuracao = cont => { const ns = Object.values(cont); return 700 + ns.reduce((s, n) => s + 650 + 230 * n, 0) + (ns.length > 1 ? 1500 : 0) + 300; };
@@ -297,7 +315,7 @@
     if (f === 'apuracao') { const k = estado.partida + '-' + estado.apuracao.n; if (animKey === k && document.getElementById('apLista')) return; animKey = k; }
     const mudou = f !== ultimaFase; ultimaFase = f;
     const antes = document.getElementById('pista'); const valor = antes ? antes.value : null, foco = antes && document.activeElement === antes;
-    ({ lobby: telaLobby, cartas: telaCartas, vez: telaVez, reacao: telaReacao, votacao: telaVotacao, apuracao: telaApuracao, segue: telaSegue, fim: telaFim })[f]();
+    ({ lobby: telaLobby, cartas: telaCartas, vez: telaVez, reacao: telaReacao, discussao: telaDiscussao, votacao: telaVotacao, apuracao: telaApuracao, segue: telaSegue, fim: telaFim })[f]();
     const depois = document.getElementById('pista'); if (depois && valor) depois.value = valor; if (depois && foco) depois.focus();
     if (mudou) window.scrollTo(0, 0);
   }
@@ -437,14 +455,14 @@
     return `<div class="card flat"><div class="linha" style="padding-top:14px"><span class="lbl grow">Rodada ${estado.rodada}</span></div>${estado.ordem.map(id => {
       if (!vivo(id)) return `<div class="linha">${av(id, 'sm fora')}<span class="nome grow fora">${esc(voce(id))}</span><span class="tag">fora</span></div>`;
       const p = ps.find(x => x.de === id);
-      const st = p ? `<strong>${esc(p.texto)}</strong><span class="fine num">${p.r[0]} 👍 ${p.r[1]} 👎</span>` : id === destacar ? '<span class="tag accent">falando</span>' : '<span class="fine">aguardando</span>';
+      const st = p ? `<strong>${esc(p.texto)}</strong><span class="fine num">${htmlR(p.r)}</span>` : id === destacar ? '<span class="tag accent">falando</span>' : '<span class="fine">aguardando</span>';
       return `<div class="linha">${av(id, 'sm')}<span class="nome grow">${esc(voce(id))}</span>${st}</div>`;
     }).join('')}</div>`;
   }
   function htmlHistorico() {
     const antigas = estado.palavras.filter(p => p.rodada < estado.rodada);
     if (!antigas.length) return '';
-    return `<details class="card" style="gap:8px"><summary class="lbl" style="cursor:pointer">Rodadas anteriores</summary><table class="hist">${antigas.map(p => `<tr><td class="de">R${p.rodada} · ${esc(voce(p.de))}</td><td><strong>${esc(p.texto)}</strong></td><td class="r">${p.r[0]} 👍 ${p.r[1]} 👎</td></tr>`).join('')}</table></details>`;
+    return `<details class="card" style="gap:8px"><summary class="lbl" style="cursor:pointer">Rodadas anteriores</summary><table class="hist">${antigas.map(p => `<tr><td class="de">R${p.rodada} · ${esc(voce(p.de))}</td><td><strong>${esc(p.texto)}</strong></td><td class="r">${htmlR(p.r)}</td></tr>`).join('')}</table></details>`;
   }
   function telaVez() {
     const f = estado.falante, minha = f === sala.id;
@@ -469,7 +487,7 @@
   function telaReacao() {
     const p = estado.palavras[estado.palavraAtual]; if (!p) return telaVez();
     const minha = p.de === sala.id, posso = vivo() && !minha;
-    const btn = (i, face, rot) => `<button class="emoji ${minhaReacao === i ? 'on' : ''}" data-reacao="${i}" ${posso ? '' : 'disabled'} aria-label="${rot}"><span class="face">${face}</span><span class="n">${p.r[i]}</span></button>`;
+    const btn = (i, face, rot) => `<button class="emoji ${minhaReacao === i ? 'on' : ''}" data-reacao="${i}" ${posso ? '' : 'disabled'} aria-label="${rot}"><span class="face">${face}</span><span class="n">${p.r[i] || 0}</span></button>`;
     render(`
       <div class="tela">
         ${topbar(tagRodada(), 'Palavra', btnCarta())}
@@ -480,13 +498,27 @@
         </div>
         <div class="stack" style="gap:10px;text-align:center">
           <span class="eyebrow">${minha ? 'Os outros estão reagindo' : posso ? 'O que você achou?' : 'Reações'}</span>
-          <div class="emojis">${btn(0, '👍', 'Curti')}${btn(1, '👎', 'Suspeito')}${btn(2, '😐', 'Tanto faz')}</div>
-          <p class="fine">Só a contagem aparece. Ninguém vê quem reagiu.</p>
+          <div class="emojis">${RE.map((x, i) => btn(i, x[0], x[1])).join('')}</div>
+          <p class="fine">Só a contagem aparece. Ninguém vê quem reagiu. Quando todos reagirem, já passa pro próximo.</p>
         </div>
         ${htmlRodada(null)}
       </div>`);
     contarRing();
-    app.querySelectorAll('[data-reacao]').forEach(b => b.onclick = () => { const i = +b.dataset.reacao; if (minhaReacao === i) return; minhaReacao = i; app.querySelectorAll('.emoji').forEach(x => x.classList.toggle('on', +x.dataset.reacao === i)); sala.enviar('reacao', { i, idx: estado.palavraAtual }); });
+    app.querySelectorAll('[data-reacao]').forEach(b => b.onclick = () => { const i = +b.dataset.reacao; if (minhaReacao === i) return; minhaReacao = i; pendente = i; voar(RE[i][0], 0); app.querySelectorAll('.emoji').forEach(x => x.classList.toggle('on', +x.dataset.reacao === i)); sala.enviar('reacao', { i, idx: estado.palavraAtual }); });
+  }
+
+  // ---------- discussão (antes de votar) ----------
+  function telaDiscussao() {
+    const porJogador = id => estado.palavras.filter(p => p.de === id);
+    render(`
+      <div class="tela">
+        ${topbar('<span class="tag">Discussão</span>', 'Quem é o impostor?', btnCarta())}
+        ${avisoEspectador()}
+        <p class="lead">Conversem. Cada um disse isto:</p>
+        <div class="stack">${estado.ordem.map(id => { const ps = porJogador(id), fora = !vivo(id); return `<div class="card" style="gap:8px"><div class="row">${av(id, fora ? 'sm fora' : 'sm')}<span class="nome grow ${fora ? 'fora' : ''}" style="font-weight:600">${esc(voce(id))}</span>${fora ? '<span class="tag">fora</span>' : ''}</div>${ps.length ? `<table class="hist">${ps.map(p => `<tr><td class="de">R${p.rodada}</td><td><strong>${esc(p.texto)}</strong></td><td class="r">${htmlR(p.r)}</td></tr>`).join('')}</table>` : '<p class="fine">Não disse nenhuma palavra.</p>'}</div>`; }).join('')}</div>
+        ${souHost ? '<button class="btn space" id="abrirVoto">Ir para a votação</button>' : '<p class="cap center space">O anfitrião abre a votação quando a conversa terminar.</p>'}
+      </div>`);
+    if (souHost) document.getElementById('abrirVoto').onclick = abrirVotacao;
   }
 
   // ---------- votação ----------
@@ -496,24 +528,22 @@
     render(`
       <div class="tela">
         ${topbar(`<span class="tag">Votação ${estado.votacaoN}</span>`, 'Quem é o impostor?', btnCarta())}
-        <p class="lead">Voto secreto. Ninguém vê nada até todos votarem. Empate: ninguém sai.</p>
+        <p class="lead">Voto secreto, sem tempo. Ninguém vê nada até todos votarem. Empate: ninguém sai.</p>
         ${!vivo() ? (participo() ? '<div class="card center"><p class="lead">Você está fora desta votação.</p></div>' : avisoEspectador())
           : jaVotei ? `<div class="card" style="align-items:center;text-align:center;gap:6px"><span class="eyebrow">Seu voto</span>${av(meuVoto || escolha || ops[0], 'lg')}<h2>${esc(nomeDe(meuVoto || escolha || ops[0]))}</h2><p class="cap">Registrado. Aguardando os outros.</p></div>`
-          : `<div class="stack">${ops.map(id => { const w = ultimaPalavra(id); return `<button class="voto ${escolha === id ? 'on' : ''}" data-voto="${esc(id)}">${av(id)}<span class="stack grow" style="gap:0"><span class="nome">${esc(nomeDe(id))}</span><span class="fine">${w ? esc(w.texto) + ' · ' + w.r[0] + ' 👍 ' + w.r[1] + ' 👎' : 'ainda sem palavra'}</span></span><span class="rad"></span></button>`; }).join('')}</div>`}
+          : `<div class="stack">${ops.map(id => { const w = ultimaPalavra(id); return `<button class="voto ${escolha === id ? 'on' : ''}" data-voto="${esc(id)}">${av(id)}<span class="stack grow" style="gap:0"><span class="nome">${esc(nomeDe(id))}</span><span class="fine">${w ? esc(w.texto) + ' · ' + htmlR(w.r) : 'ainda sem palavra'}</span></span><span class="rad"></span></button>`; }).join('')}</div>`}
         <div class="chips" style="justify-content:center">${vs.map(id => `<span class="chip ${estado.votaram[id] ? 'on' : ''}">${estado.votaram[id] ? '✓' : '…'} ${esc(voce(id))}</span>`).join('')}</div>
-        ${estado.prazo ? `<p class="cap center">Tempo para votar: <strong class="num" id="votSeg"></strong> s</p>` : ''}
         ${vivo() && !jaVotei ? `<button class="btn space" id="confirmar" ${escolha ? '' : 'disabled'}>${escolha ? 'Confirmar voto em ' + esc(nomeDe(escolha)) : 'Escolha alguém'}</button>` : ''}
         ${souHost ? `<button class="btn ghost ${vivo() && !jaVotei ? '' : 'space'}" id="encerrar">Encerrar com os votos de agora</button>` : ''}
         ${htmlHistoricoCompleto()}
       </div>`);
-    if (estado.prazo) contarBarra('votSeg', null);
     app.querySelectorAll('[data-voto]').forEach(b => b.onclick = () => { escolha = b.dataset.voto; app.querySelectorAll('.voto').forEach(x => x.classList.toggle('on', x.dataset.voto === escolha)); const c = document.getElementById('confirmar'); if (c) { c.disabled = false; c.textContent = 'Confirmar voto em ' + nomeDe(escolha); } });
     const cf = document.getElementById('confirmar'); if (cf) cf.onclick = () => { if (!escolha) return; meuVoto = escolha; sala.enviar('voto', { em: meuVoto }); estado.votaram[sala.id] = true; desenhar(); };
     const en = document.getElementById('encerrar'); if (en) en.onclick = () => { if (!Object.keys(H.votos).length) return toast('Ninguém votou ainda.'); apurar(); };
   }
   function htmlHistoricoCompleto() {
     if (!estado.palavras.length) return '';
-    return `<details class="card" style="gap:8px"><summary class="lbl" style="cursor:pointer">Todas as palavras ditas</summary><table class="hist">${estado.palavras.map(p => `<tr><td class="de">R${p.rodada} · ${esc(voce(p.de))}</td><td><strong>${esc(p.texto)}</strong></td><td class="r">${p.r[0]} 👍 ${p.r[1]} 👎</td></tr>`).join('')}</table></details>`;
+    return `<details class="card" style="gap:8px"><summary class="lbl" style="cursor:pointer">Todas as palavras ditas</summary><table class="hist">${estado.palavras.map(p => `<tr><td class="de">R${p.rodada} · ${esc(voce(p.de))}</td><td><strong>${esc(p.texto)}</strong></td><td class="r">${htmlR(p.r)}</td></tr>`).join('')}</table></details>`;
   }
 
   // ---------- apuração (revela nome por nome, só a contagem) ----------

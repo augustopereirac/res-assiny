@@ -71,7 +71,7 @@ p{margin:0}
 .linha{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--hair);min-width:0}
 .linha:last-child{border-bottom:0}
 .linha .nome{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.linha .nome.fora{color:var(--muted2);text-decoration:line-through;font-weight:400}
+.linha .nome.fora,.nome.fora{color:var(--muted2);text-decoration:line-through;font-weight:400}
 
 .av{width:40px;height:40px;border-radius:50%;background:var(--card2);color:var(--ink);display:grid;place-items:center;font-weight:600;font-size:15px;flex-shrink:0;border:1px solid var(--hair);letter-spacing:0}
 .av.sm{width:28px;height:28px;font-size:12px}
@@ -91,12 +91,12 @@ p{margin:0}
 .ring.pouco .prg{stroke:var(--danger)}
 .ring span{font-weight:600;font-size:22px;letter-spacing:-0.4px}
 
-.emojis{display:flex;justify-content:center;gap:14px}
+.emojis{display:flex;justify-content:center;gap:10px}
 .emoji{display:flex;flex-direction:column;align-items:center;gap:6px;background:transparent;border:0;padding:0;cursor:pointer;color:var(--ink);font:inherit}
 .emoji:disabled{cursor:default;opacity:.7}
-.emoji .face{width:78px;height:78px;border-radius:50%;background:var(--card2);border:1px solid var(--hair);display:grid;place-items:center;font-size:34px;transition:transform .12s ease,border-color .2s}
+.emoji .face{width:62px;height:62px;border-radius:50%;background:var(--card2);border:1px solid var(--hair);display:grid;place-items:center;font-size:28px;transition:transform .12s ease,border-color .2s}
 .emoji.on .face{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 18%,var(--card2));transform:scale(1.06)}
-.emoji .n{font-weight:600;font-size:15px;font-variant-numeric:tabular-nums;color:var(--muted)}
+.emoji .n{font-weight:600;font-size:14px;font-variant-numeric:tabular-nums;color:var(--muted)}
 .emoji.on .n{color:var(--ink)}
 .palavra{font-size:40px;font-weight:600;letter-spacing:-1px;line-height:1.05;word-break:break-word}
 
@@ -173,3 +173,8 @@ table.rk .pos{color:var(--muted2);font-weight:600;width:24px;text-align:left}
 .confete{position:fixed;inset:0;pointer-events:none;z-index:5}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:9999px;font-size:14px;font-weight:600;z-index:70;max-width:90vw;text-align:center}
 @media (prefers-reduced-motion: reduce){ *{transition:none !important;animation:none !important} }
+
+/* emojis subindo quando alguém reage */
+.voo{position:fixed;inset:0;pointer-events:none;z-index:40;overflow:hidden}
+.voo span{position:absolute;bottom:22%;font-size:34px;line-height:1;animation:subir 2.2s ease-out forwards;will-change:transform,opacity}
+@keyframes subir{0%{transform:translateY(0) scale(.7);opacity:0}10%{opacity:1;transform:translateY(-24px) scale(1.15)}60%{opacity:.95}100%{transform:translateY(-52vh) scale(1);opacity:0}}
