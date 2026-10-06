@@ -32,13 +32,28 @@
       <div class="card">${times.map((t, i) => `<p style="margin:8px 0"><strong>${nomeTime(t, i)}</strong>${t.length === 3 ? ' <span class="muted small">(trio: 3 rodadas, conta a % de acertos)</span>' : ''}</p>`).join('')}</div>
       <p class="muted center small">${C.plural(nr, 'rodada', 'rodadas')} de 1:30 · ${M.TEMAS[cfg.tema]}</p>
       <button class="btn" id="ir">Começar</button>
-      <button class="btn secondary" id="resortear">🔀 Sortear de novo</button>`);
+      <button class="btn secondary" id="resortear">🔀 Sortear de novo</button>
+      <button class="btn secondary" id="manual">✋ Escolher as duplas</button>`);
+    document.getElementById('manual').onclick = () => telaManual([]);
     document.getElementById('voltar').onclick = telaSetup;
     document.getElementById('resortear').onclick = () => telaTimes(M.montarTimes(cfg.jogadores));
     document.getElementById('ir').onclick = () => {
       p = { times, rodadas: M.rodadas(times), k: 0, feitas: [], usados: [], tema: cfg.tema };
       telaPasse();
     };
+  }
+
+  function telaManual(ordem) {
+    render(`<div class="topbar"><button class="link-back" id="voltar">← Voltar</button></div>
+      <div class="center"><div style="font-size:3rem">🎭</div><h2 style="margin:4px 0">Escolher as duplas</h2></div>
+      ${M.htmlManual(cfg.jogadores, ordem, esc)}`);
+    document.getElementById('voltar').onclick = () => telaTimes(M.montarTimes(cfg.jogadores));
+    app.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
+      const n = b.dataset.pick;
+      telaManual(ordem.includes(n) ? ordem.filter(x => x !== n) : ordem.concat([n]));
+    });
+    document.getElementById('manualLimpar').onclick = () => telaManual([]);
+    document.getElementById('manualOk').onclick = () => telaTimes(M.fecharManual(ordem, cfg.jogadores));
   }
 
   const cab = () => `<div class="topbar"><span class="pill">Rodada ${p.k + 1} de ${p.rodadas.length}</span><button class="link-back" id="sair">Sair</button></div>`;

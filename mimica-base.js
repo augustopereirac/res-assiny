@@ -51,5 +51,25 @@
   const fmt = ms => { const s = Math.round(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
   M.fmt = fmt;
 
+  // duplas escolhidas à mão: toca em duas pessoas para formar cada dupla (sobrou um? entra no último time)
+  M.timesDaOrdem = (ordem, todos) => {
+    const times = [];
+    for (let i = 0; i + 1 < ordem.length; i += 2) times.push([ordem[i], ordem[i + 1]]);
+    const resto = todos.filter(x => !ordem.includes(x)).concat(ordem.length % 2 ? [ordem[ordem.length - 1]] : []);
+    return { times, resto };
+  };
+  M.htmlManual = (todos, ordem, nome) => {
+    const { times, resto } = M.timesDaOrdem(ordem, todos);
+    const pronto = times.length > 0 && resto.length <= 1;
+    return `<div class="card"><span class="label">Toque em duas pessoas para formar cada dupla</span>
+      ${times.map((t, i) => `<p style="margin:6px 0"><strong>Time ${i + 1}:</strong> ${t.map(nome).join(' & ')}</p>`).join('')}
+      <div class="chips" style="margin-top:8px">${resto.map(x => `<button type="button" class="chip ${ordem.includes(x) ? 'on' : ''}" data-pick="${C.esc(String(x))}">${nome(x)}</button>`).join('')}</div>
+      ${resto.length === 1 && times.length ? `<p class="muted small" style="margin:8px 0 0">${nome(resto[0])} vai junto com o Time ${times.length} (trio).</p>` : ''}</div>
+      <button class="btn" id="manualOk" ${pronto ? '' : 'disabled'}>Confirmar duplas</button>
+      <button class="btn secondary" id="manualLimpar">↺ Recomeçar</button>`;
+  };
+  // devolve os times finais (o que sobrou entra no último time)
+  M.fecharManual = (ordem, todos) => { const { times, resto } = M.timesDaOrdem(ordem, todos); if (resto.length === 1 && times.length) times[times.length - 1].push(resto[0]); return times; };
+
   global.Mimica = M;
 })(window);

@@ -5,7 +5,7 @@
   const app = document.getElementById('app');
   const JOGO = 'mimica';
   const render = html => { app.innerHTML = html; };
-  let sala = null, souHost = false, estado = null, presentes = [], H = null, priv = null;
+  let sala = null, souHost = false, estado = null, presentes = [], H = null, priv = null, manual = null;
 
   Sala.telaEntrada(app, 'Mímica', 'mimica.html', (nome, codigo, criar) => {
     souHost = criar || Sala.souHostDe(JOGO) === codigo;
@@ -136,11 +136,26 @@
   function telaTimes() {
     render(`${topo('Mímica')}<div class="center"><div style="font-size:3rem">🎭</div><h2 style="margin:4px 0">Duplas</h2></div>${htmlTimes(estado.times)}
       <p class="muted center small">${C.plural(estado.times.reduce((s, t) => s + t.length, 0), 'rodada', 'rodadas')} de 1:30 · ${M.TEMAS[(estado.cfg && estado.cfg.tema) || 'futebol']}</p>
-      ${souHost ? '<button class="btn" id="ir">Começar</button><button class="btn secondary" id="resortear">🔀 Sortear de novo</button><button class="btn ghost" id="lobby">← Voltar</button>' : '<p class="muted center">O anfitrião vai começar.</p>'}`);
+      ${souHost ? '<button class="btn" id="ir">Começar</button><button class="btn secondary" id="resortear">🔀 Sortear de novo</button><button class="btn secondary" id="manual">✋ Escolher as duplas</button><button class="btn ghost" id="lobby">← Voltar</button>' : '<p class="muted center">O anfitrião vai começar.</p>'}`);
     if (!souHost) return;
+    if (manual) return telaManual();
+    document.getElementById('manual').onclick = () => { manual = []; telaManual(); };
     document.getElementById('ir').onclick = comecar;
     document.getElementById('resortear').onclick = montar;
     document.getElementById('lobby').onclick = () => { H.fase = 'lobby'; publicar(); };
+  }
+  // anfitrião escolhe as duplas à mão (só no celular dele; publica quando confirmar)
+  function telaManual() {
+    const todos = presentes.map(p => p.id);
+    manual = manual.filter(id => todos.includes(id));
+    render(`${topo('Mímica')}<div class="center"><div style="font-size:3rem">🎭</div><h2 style="margin:4px 0">Escolher as duplas</h2></div>
+      ${M.htmlManual(todos, manual, eu)}<button class="btn ghost" id="cancelar">Cancelar</button>`);
+    app.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { const id = b.dataset.pick; manual = manual.includes(id) ? manual.filter(x => x !== id) : manual.concat([id]); telaManual(); });
+    document.getElementById('manualLimpar').onclick = () => { manual = []; telaManual(); };
+    document.getElementById('cancelar').onclick = () => { manual = null; desenhar(); };
+    document.getElementById('manualOk').onclick = () => {
+      H.jogadores = presentes.map(p => ({ id: p.id, nome: p.nome })); H.times = M.fecharManual(manual, todos); manual = null; H.fase = 'times'; publicar();
+    };
   }
   const meusNomes = () => priv && priv.partida === estado.partida && priv.k === estado.k ? priv.nomes : null;
   function telaPasse() {
