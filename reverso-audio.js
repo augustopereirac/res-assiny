@@ -32,7 +32,9 @@
     };
     src.connect(proc); proc.connect(mudo); mudo.connect(c.destination);
     const parar = async () => {
-      if (fim) return null; fim = true;
+      if (fim) return null;
+      await new Promise(r => setTimeout(r, 350)); // recebe o que ainda está no buffer do microfone
+      fim = true;
       try { src.disconnect(); proc.disconnect(); mudo.disconnect(); } catch (e) {}
       stream.getTracks().forEach(t => t.stop());
       if (!total) return null;
@@ -44,22 +46,34 @@
   };
 
   // tira o silêncio do começo e do fim (deixa uma folguinha) e normaliza o volume
+  // Tira só o silêncio "de verdade" das pontas, com folga grande, para nunca cortar a fala.
+  // O limite de silêncio é medido pelo ruído de fundo da própria gravação (não pelo pico),
+  // assim sílabas finais mais fracas (s, x, f, "mos"...) não são confundidas com silêncio.
   function aparar(d, sr) {
-    const jan = Math.floor(sr * 0.02);
-    let pico = 0; for (let i = 0; i < d.length; i++) { const v = Math.abs(d[i]); if (v > pico) pico = v; }
-    if (pico < 0.003) return d;
-    const lim = Math.max(0.01, pico * 0.08);
-    const rms = (s) => { let t = 0, n = 0; for (let i = s; i < Math.min(d.length, s + jan); i++) { t += d[i] * d[i]; n++; } return n ? Math.sqrt(t / n) : 0; };
-    let a = 0; while (a < d.length && rms(a) < lim) a += jan;
-    let b = d.length; while (b > a && rms(Math.max(a, b - jan)) < lim) b -= jan;
-    const folga = Math.floor(sr * 0.12);
-    a = Math.max(0, a - folga); b = Math.min(d.length, b + folga);
-    if (b - a < sr * 0.2) { a = 0; b = d.length; }
+    const jan = Math.max(1, Math.floor(sr * 0.02));
+    const nj = Math.ceil(d.length / jan), rms = new Float32Array(nj);
+    let pico = 0;
+    for (let w = 0; w < nj; w++) {
+      let t = 0; const ini = w * jan, fim = Math.min(d.length, ini + jan);
+      for (let i = ini; i < fim; i++) { t += d[i] * d[i]; const v = Math.abs(d[i]); if (v > pico) pico = v; }
+      rms[w] = Math.sqrt(t / Math.max(1, fim - ini));
+    }
+    if (pico < 0.003) return d.slice();
+    const ord = Array.from(rms).sort((x, y) => x - y);
+    const ruido = ord[Math.floor(ord.length * 0.1)] || 0;
+    const topo = ord[ord.length - 1] || 0;
+    const lim = Math.max(ruido * 3, topo * 0.02, 0.002);
+    let wa = 0; while (wa < nj && rms[wa] < lim) wa++;
+    let wb = nj - 1; while (wb > wa && rms[wb] < lim) wb--;
+    let a = wa * jan - Math.floor(sr * 0.3);          // 0,3 s antes da fala
+    let b = (wb + 1) * jan + Math.floor(sr * 0.6);    // 0,6 s depois da fala
+    a = Math.max(0, a); b = Math.min(d.length, b);
+    if (b - a < sr * 0.3) { a = 0; b = d.length; }
     const out = d.slice(a, b);
     const g = Math.min(8, 0.9 / pico);
     for (let i = 0; i < out.length; i++) out[i] *= g;
-    // fade de 10 ms nas pontas para não estalar
-    const f = Math.min(Math.floor(sr * 0.01), out.length >> 1);
+    // fade de 5 ms nas pontas (só no silêncio da folga) para não estalar
+    const f = Math.min(Math.floor(sr * 0.005), out.length >> 1);
     for (let i = 0; i < f; i++) { const k = i / f; out[i] *= k; out[out.length - 1 - i] *= k; }
     return out;
   }
