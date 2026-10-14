@@ -83,7 +83,7 @@
         O app inverte a imitação e… dá para entender a frase? 😂</p></div>
       ${C.htmlEditorJogadores(cfg.jogadores)}
       <div class="card"><span class="label">Frases</span><div class="chips">${Object.entries(F.TEMAS).map(([k, v]) => `<button type="button" class="chip ${cfg.tema === k ? 'on' : ''}" data-tema="${k}">${v}</button>`).join('')}</div>
-        <p class="muted small" style="margin:6px 0 0">${cfg.tema === 'livre' ? 'Quem grava escreve a própria frase (ou fala qualquer coisa).' : 'O app sorteia uma frase para quem grava (dá para trocar ou escrever outra).'}</p></div>
+        <p class="muted small" style="margin:6px 0 0">${cfg.tema === 'livre' ? 'Quem grava escreve a própria frase e depois fala.' : 'O app sorteia uma frase para quem grava (dá para trocar ou escrever outra).'}</p></div>
       <div class="card"><span class="label">Voltas</span><div class="chips">${[1, 2, 3].map(n => `<button type="button" class="chip ${cfg.voltas === n ? 'on' : ''}" data-voltas="${n}">${n}</button>`).join('')}</div>
         <p class="muted small" style="margin:6px 0 0">Em cada volta, cada pessoa grava uma vez e imita uma vez.</p>
         <span class="label" style="margin-top:12px">Tentativas para imitar</span><div class="chips">${[1, 2, 3, 5].map(n => `<button type="button" class="chip ${cfg.tentativas === n ? 'on' : ''}" data-tent="${n}">${n}</button>`).join('')}</div></div>
@@ -91,10 +91,10 @@
       ${cfg.jogadores.length < 2 ? '<p class="muted small center">Precisa de pelo menos 2 pessoas.</p>' : ''}
       ${A.suportado() ? '' : '<p class="muted small center">⚠️ Este navegador não grava áudio. Use o Chrome ou o Safari atualizados.</p>'}
       <div class="card"><span class="label">Como funciona</span>
-        <p class="small" style="margin:6px 0">1. <strong>Quem grava</strong> fala a frase no celular (os outros não podem ouvir — saiam de perto ou tampem os ouvidos 🙉).</p>
+        <p class="small" style="margin:6px 0">1. <strong>Quem grava</strong> escreve (ou sorteia) a frase e fala no celular (os outros não podem ouvir — saiam de perto ou tampem os ouvidos 🙉).</p>
         <p class="small" style="margin:6px 0">2. <strong>Quem imita</strong> ouve o áudio ao contrário quantas vezes quiser e grava a imitação, sílaba por sílaba.</p>
-        <p class="small" style="margin:6px 0">3. O app inverte a imitação e toca para todo mundo. Cada um chuta a frase em voz alta.</p>
-        <p class="small" style="margin:6px 0">4. Quem acertou ganha <strong>1 ponto</strong>. Quem gravou ganha <strong>1 ponto</strong> se alguém acertou.</p></div>`);
+        <p class="small" style="margin:6px 0">3. O app inverte a imitação e toca. Quem imitou escreve qual acha que é a frase.</p>
+        <p class="small" style="margin:6px 0">4. Quem imitou escreve o palpite. O app mostra a frase escrita, o palpite e os áudios, e os dois confirmam se acertou. Acertou: <strong>1 ponto</strong> para quem gravou e <strong>1</strong> para quem imitou.</p></div>`);
     C.ligarEditorJogadores(app, cfg.jogadores, telaSetup);
     app.querySelectorAll('[data-tema]').forEach(b => b.onclick = () => { cfg.tema = b.dataset.tema; lsSet('tema', cfg.tema); telaSetup(); });
     app.querySelectorAll('[data-voltas]').forEach(b => b.onclick = () => { cfg.voltas = +b.dataset.voltas; lsSet('voltas', cfg.voltas); telaSetup(); });
@@ -135,7 +135,7 @@
     const livre = p.tema === 'livre';
     render(`${cab()}<div class="card center"><span class="label">Só ${esc(r.fala)} pode ver</span>
       ${livre || r.editando
-        ? `<input class="campo" id="frase" maxlength="60" placeholder="Escreva a frase (curta funciona melhor)" value="${esc(r.frase || '')}" style="margin-top:8px">`
+        ? `<input class="campo" id="frase" maxlength="60" placeholder="Escreva a frase que você vai falar" value="${esc(r.frase || '')}" style="margin-top:8px">`
         : `<div class="big-name rv-frase">“${esc(r.frase)}”</div>
            ${r.original ? '' : `<div class="row" style="gap:8px;justify-content:center"><button class="chip" id="outra">🔀 Outra frase</button><button class="chip" id="escrever">✍️ Escrever a minha</button></div>`}`}
       <p class="muted small" style="margin:10px 0 0">Fale a frase no microfone, normal e bem claro. ${esc(r.imita)} não pode ouvir!</p></div>
@@ -161,7 +161,8 @@
     const pr = document.getElementById('pronto');
     if (pr) pr.onclick = () => {
       if (inp) r.frase = inp.value.trim();
-      if (r.frase) p.usados.push(r.frase);
+      if (!r.frase) { C.toast('Escreva a frase que você falou.'); if (inp) inp.focus(); return; }
+      p.usados.push(r.frase);
       telaPasseImita();
     };
   }
@@ -189,7 +190,7 @@
           <button class="btn" id="ouvirRes">🔊 Tocar a imitação ao contrário</button>
           <button class="btn secondary" id="ouvirMinha">▶️ Ouvir minha imitação (como gravei)</button>
           ${resta > 0 ? `<button class="btn ghost" id="denovo">🎙️ Tentar de novo (${C.plural(resta, 'tentativa restante', 'tentativas restantes')})</button>` : ''}</div>
-        <button class="btn" id="chutar">🗣️ Todo mundo chutou — revelar a frase</button>`
+        <button class="btn" id="chutar">✍️ Escrever meu palpite</button>`
       : htmlGravador('gravar', '🎙️ Gravar a imitação')}`);
     ligarSair();
     ligarPlay('ouvirInv', () => r.invertido);
@@ -199,7 +200,7 @@
     const dn = document.getElementById('denovo');
     if (dn) dn.onclick = renderGravarDeNovo;
     const ch = document.getElementById('chutar');
-    if (ch) ch.onclick = () => { r.acertaram = []; telaRevela(false); };
+    if (ch) ch.onclick = telaPalpite;
     // toca o resultado sozinho assim que a imitação é gravada
     if (ult && r.novo) { r.novo = false; const b = document.getElementById('ouvirRes'); if (b) setTimeout(() => b.click(), 250); }
   }
@@ -216,29 +217,68 @@
     document.getElementById('cancelar').onclick = telaImita;
   }
 
-  function telaRevela(revelada) {
+  // quem imitou escreve o que acha que é a frase
+  function telaPalpite() {
     const r = p.rodadas[p.k];
     const ult = r.imitacoes[r.imitacoes.length - 1];
-    const podem = outros(r.fala);
-    if (!revelada) {
-      render(`${cab()}<div class="pass"><div class="emoji">🤔</div>
-        <p>Cada um fala em voz alta o que acha que é a frase.</p>
-        <button class="btn secondary" id="ouvirRes">🔊 Tocar a imitação ao contrário de novo</button>
-        <button class="btn" id="revelar" style="margin-top:12px">👀 Revelar a frase</button></div>`);
-      ligarSair();
-      ligarPlay('ouvirRes', () => ult.resultado);
-      document.getElementById('revelar').onclick = () => telaRevela(true);
-      return;
+    render(`${cab()}<div class="card center"><span class="label">${esc(r.imita)}, qual é a frase?</span>
+      <p class="muted small" style="margin:4px 0 10px">Ouça sua imitação ao contrário e escreva a frase que você acha que ${esc(r.fala)} falou.</p>
+      <button class="btn secondary" id="ouvirRes">🔊 Tocar a imitação ao contrário</button>
+      <input class="campo" id="palpite" maxlength="80" placeholder="Escreva seu palpite" value="${esc(r.palpite || '')}" style="margin-top:10px" autocomplete="off"></div>
+      <button class="btn" id="enviar">👀 Enviar palpite e revelar</button>`);
+    ligarSair();
+    ligarPlay('ouvirRes', () => ult.resultado);
+    const inp = document.getElementById('palpite');
+    inp.oninput = () => { r.palpite = inp.value.trim(); };
+    inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('enviar').click(); } };
+    document.getElementById('enviar').onclick = () => {
+      r.palpite = inp.value.trim();
+      if (!r.palpite) { C.toast('Escreva seu palpite (mesmo que seja um chute).'); inp.focus(); return; }
+      r.votos = {}; telaRevela();
+    };
+  }
+
+  // parecido de 0 a 100 entre a frase escrita e o palpite (só uma ajuda; quem decide são os dois)
+  function parecido(a, b) {
+    a = C.norm(a); b = C.norm(b);
+    if (!a || !b) return 0;
+    if (a === b) return 100;
+    const n = Math.max(a.length, b.length);
+    let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+    for (let i = 1; i <= a.length; i++) {
+      const cur = [i];
+      for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = cur;
     }
-    render(`${cab()}<div class="card center"><span class="label">A frase de ${esc(r.fala)} era</span>
-      <div class="big-name rv-frase">${r.frase ? '“' + esc(r.frase) + '”' : '<span class="muted">(não escrita — ouça o original)</span>'}</div>
-      <button class="btn secondary" id="ouvirOrig">▶️ Original de ${esc(r.fala)}</button>
-      <button class="btn secondary" id="ouvirRes">🔄 Imitação de ${esc(r.imita)} ao contrário</button>
-      <button class="btn secondary" id="comparar">🆚 Os dois em sequência</button></div>
-      <div class="card"><span class="label">Quem acertou?</span>
-        <div class="chips">${podem.map(n => `<button type="button" class="chip ${r.acertaram.includes(n) ? 'on' : ''}" data-ac="${esc(n)}">${r.acertaram.includes(n) ? '✅ ' : ''}${esc(n)}</button>`).join('')}</div>
-        <p class="muted small" style="margin:6px 0 0">Quem acertou ganha 1 ponto. ${esc(r.fala)} ganha 1 se alguém acertou.</p></div>
-      <button class="btn" id="prox">${p.k + 1 >= p.rodadas.length ? '🏆 Ver resultado' : 'Próxima rodada'}</button>
+    return Math.max(0, Math.round(100 * (1 - prev[b.length] / n)));
+  }
+
+  function telaRevela() {
+    const r = p.rodadas[p.k];
+    const ult = r.imitacoes[r.imitacoes.length - 1];
+    const v = r.votos, quem = [r.fala, r.imita];
+    const votaram = quem.every(n => v[n] !== undefined);
+    const concordam = votaram && v[r.fala] === v[r.imita];
+    const pct = parecido(r.frase, r.palpite);
+    const btnVoto = (n, val, txt) => `<button type="button" class="chip ${v[n] === val ? 'on' : ''}" data-voto="${esc(n)}" data-val="${val ? 1 : 0}">${txt}</button>`;
+    render(`${cab()}<div class="card center">
+        <span class="label">Frase que ${esc(r.fala)} escreveu</span>
+        <div class="big-name rv-frase">“${esc(r.frase)}”</div>
+        <span class="label" style="margin-top:6px">Palpite de ${esc(r.imita)}</span>
+        <div class="big-name rv-frase" style="color:var(--accent2)">“${esc(r.palpite)}”</div>
+        <p class="muted small" style="margin:0">${pct === 100 ? '🎯 Idênticas!' : `Parecido: ${pct}%`}</p></div>
+      <div class="card center"><span class="label">Ouça e confira</span>
+        <button class="btn secondary" id="ouvirOrig">▶️ O que ${esc(r.fala)} falou (original)</button>
+        <button class="btn secondary" id="ouvirRes">🔄 Imitação de ${esc(r.imita)} ao contrário</button>
+        <button class="btn secondary" id="comparar">🆚 Os dois em sequência</button></div>
+      <div class="card"><span class="label">Os dois confirmam: acertou a frase?</span>
+        ${quem.map(n => `<div class="row" style="align-items:center;gap:8px;margin:8px 0;flex-wrap:wrap">
+          <strong style="min-width:90px">${esc(n)}</strong><span class="muted small">${n === r.fala ? '(gravou)' : '(imitou)'}</span>
+          <div class="chips" style="margin:0">${btnVoto(n, true, '✅ Acertou')}${btnVoto(n, false, '❌ Errou')}</div></div>`).join('')}
+        ${votaram && !concordam ? '<p class="small" style="margin:6px 0 0;color:#ff6b6b">⚠️ Vocês discordaram. Conversem e mudem o voto até concordar.</p>' : ''}
+        ${concordam ? `<p class="small" style="margin:6px 0 0"><strong>${v[r.fala] ? '✅ Acertou!' : '❌ Errou.'}</strong> ${v[r.fala] ? `${esc(r.fala)} e ${esc(r.imita)} ganham 1 ponto cada.` : 'Ninguém pontua nesta rodada.'}</p>` : ''}
+        ${!votaram ? '<p class="muted small" style="margin:6px 0 0">Se acertar, quem gravou e quem imitou ganham 1 ponto cada.</p>' : ''}</div>
+      <button class="btn" id="prox" ${concordam ? '' : 'disabled'}>${p.k + 1 >= p.rodadas.length ? '🏆 Ver resultado' : 'Próxima rodada'}</button>
       ${htmlPlacar()}`);
     ligarSair();
     ligarPlay('ouvirOrig', () => r.original);
@@ -246,15 +286,15 @@
     const cmp = document.getElementById('comparar');
     const cmpTxt = cmp.innerHTML;
     cmp.onclick = () => { if (cmp.dataset.on) { delete cmp.dataset.on; A.parar(); cmp.innerHTML = cmpTxt; return; } tocarSeq([r.original, ult.resultado], cmp, cmpTxt); };
-    app.querySelectorAll('[data-ac]').forEach(b => b.onclick = () => {
-      const n = b.dataset.ac;
-      r.acertaram = r.acertaram.includes(n) ? r.acertaram.filter(x => x !== n) : r.acertaram.concat([n]);
-      b.classList.toggle('on', r.acertaram.includes(n));
-      b.textContent = (r.acertaram.includes(n) ? '✅ ' : '') + n;
+    app.querySelectorAll('[data-voto]').forEach(b => b.onclick = () => {
+      const y = window.scrollY;
+      v[b.dataset.voto] = b.dataset.val === '1';
+      telaRevela(); window.scrollTo(0, y);
     });
     document.getElementById('prox').onclick = () => {
-      r.acertaram.forEach(n => { p.pts[n]++; if (n === r.imita) p.tb[n]++; });
-      if (r.acertaram.length) p.pts[r.fala]++;
+      if (!concordam) return;
+      r.acertou = !!v[r.fala];
+      if (r.acertou) { p.pts[r.fala]++; p.pts[r.imita]++; p.tb[r.imita]++; }
       r.feita = true;
       // libera a memória dos áudios antigos
       r.original = r.invertido = null; r.imitacoes = [];
@@ -277,7 +317,7 @@
       <h1 class="logo" style="font-size:2rem">${cl.camp.map(esc).join('<br>')}</h1></div>
       ${C.htmlDesempate(cl.motivo)}
       ${C.htmlPodio(cl.rank)}
-      <div class="card"><span class="label">Rodadas</span>${p.rodadas.map(r => `<p class="small" style="margin:6px 0">${r.acertaram && r.acertaram.length ? '✅' : '❌'} <strong>${esc(r.fala)}</strong> → ${esc(r.imita)}: ${r.frase ? '“' + esc(r.frase) + '”' : '<span class="muted">(livre)</span>'}${r.acertaram && r.acertaram.length ? ` <span class="muted">· acertou: ${lista(r.acertaram)}</span>` : ''}</p>`).join('')}</div>
+      <div class="card"><span class="label">Rodadas</span>${p.rodadas.map(r => `<p class="small" style="margin:6px 0">${r.acertou ? '✅' : '❌'} <strong>${esc(r.fala)}</strong> → ${esc(r.imita)}: “${esc(r.frase)}” <span class="muted">· palpite: “${esc(r.palpite || '')}”</span></p>`).join('')}</div>
       <button class="btn" id="denovo">Jogar de novo</button>
       <a class="btn ghost" href="index.html">Voltar aos jogos</a>`);
     document.getElementById('denovo').onclick = telaSetup;
